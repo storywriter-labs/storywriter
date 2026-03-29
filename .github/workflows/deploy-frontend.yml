@@ -8,7 +8,7 @@ name: Deploy Frontend
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   workflow_dispatch:
     inputs:
       environment:
@@ -21,8 +21,9 @@ on:
         - production
 
 env:
-  NODE_VERSION: '18'
+  NODE_VERSION: '24'
   AWS_REGION: us-east-1
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   # Determine environment based on branch or manual input
@@ -221,7 +222,7 @@ jobs:
         run: npm run test
         
       - name: Cache test results
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             coverage/

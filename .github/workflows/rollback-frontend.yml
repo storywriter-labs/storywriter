@@ -17,6 +17,7 @@ on:
 
 env:
   AWS_REGION: us-east-1
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   rollback:
