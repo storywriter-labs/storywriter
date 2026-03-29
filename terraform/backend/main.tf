@@ -22,7 +22,7 @@ provider "aws" {
 
 # S3 bucket for Terraform state
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = "storywriter-terraform-state"
+  bucket = "storywriter-terraform-state-548846592016"
 }
 
 resource "aws_s3_bucket_versioning" "terraform_state" {

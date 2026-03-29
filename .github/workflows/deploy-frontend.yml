@@ -8,7 +8,7 @@ name: Deploy Frontend
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   workflow_dispatch:
     inputs:
       environment:

@@ -8,16 +8,17 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "storywriter-terraform-state"
+    bucket         = "storywriter-terraform-state-548846592016"
     key            = "frontend-production/terraform.tfstate"
     region         = "us-east-1"
     encrypt        = true
-    dynamodb_table = "terraform-state-lock"
+    dynamodb_table = "storywriter-terraform-locks"
   }
 }
 
 provider "aws" {
   region = "us-east-1"
+  profile = "storywriter"
 
   default_tags {
     tags = {
@@ -40,14 +41,6 @@ resource "aws_s3_bucket" "frontend" {
 
   tags = {
     Name = "${var.environment}-storywriter-frontend"
-  }
-}
-
-# S3 Bucket versioning
-resource "aws_s3_bucket_versioning" "frontend" {
-  bucket = aws_s3_bucket.frontend.id
-  versioning_configuration {
-    status = "Enabled"
   }
 }
 
@@ -139,7 +132,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   }
 
   viewer_certificate {
-    acm_certificate_arn      = data.aws_acm_certificate.frontend.arn
+    acm_certificate_arn      = aws_acm_certificate_validation.frontend.certificate_arn
     ssl_support_method       = "sni-only"
     minimum_protocol_version = "TLSv1.2_2021"
   }
@@ -149,11 +142,39 @@ resource "aws_cloudfront_distribution" "frontend" {
   }
 }
 
-# Reference existing wildcard ACM Certificate (shared across environments)
-data "aws_acm_certificate" "frontend" {
-  domain      = "*.storywriter.net"
-  statuses    = ["ISSUED"]
-  most_recent = true
+# ACM Certificate for the frontend domain
+resource "aws_acm_certificate" "frontend" {
+  domain_name               = var.domain_name
+  subject_alternative_names = ["www.${var.domain_name}"]
+  validation_method         = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Route53 DNS validation records
+resource "aws_route53_record" "frontend_cert_validation" {
+  for_each = {
+    for dvo in aws_acm_certificate.frontend.domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+  }
+
+  allow_overwrite = true
+  name            = each.value.name
+  records         = [each.value.record]
+  ttl             = 60
+  type            = each.value.type
+  zone_id         = data.aws_route53_zone.main.zone_id
+}
+
+# ACM Certificate validation
+resource "aws_acm_certificate_validation" "frontend" {
+  certificate_arn         = aws_acm_certificate.frontend.arn
+  validation_record_fqdns = [for record in aws_route53_record.frontend_cert_validation : record.fqdn]
 }
 
 # S3 Bucket Policy for CloudFront access
