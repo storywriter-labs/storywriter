@@ -196,4 +196,12 @@ export const styles = StyleSheet.create({
         color: THEME.accent,
         fontWeight: '600',
     },
+    storyName: {
+        fontSize: 28,
+        fontWeight: 'bold',
+        color: THEME.text,
+        textAlign: 'center',
+        marginBottom: 16,
+        fontFamily: Platform.OS === 'web' ? 'Georgia, serif' : 'serif',
+    },
 });

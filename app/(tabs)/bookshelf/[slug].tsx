@@ -36,6 +36,7 @@ export default function StoryDetailScreen() {
                             content: story.body || null,
                             sections: mappedSections,
                             storyId: story.id,
+                            name: story.name || null,
                         },
                     });
                 } else {

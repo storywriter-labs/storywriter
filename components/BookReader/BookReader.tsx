@@ -60,7 +60,7 @@ const ShimmerPlaceholder = () => {
     );
 };
 
-const BookReader = ({ sections: sectionsProp, onBack }: BookReaderProps = {}) => {
+const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = {}) => {
     const {
         story,
         resetConversation,
@@ -573,7 +573,7 @@ const BookReader = ({ sections: sectionsProp, onBack }: BookReaderProps = {}) =>
                         >
 
                             {currentIndex === 0 && (
-                                <Text style={styles.storyName}>{name || story.name}</Text>
+                                <Text style={styles.storyName}>{name || story.name || ''}</Text>
                             )}
 
                             {isLoadingImage && !currentPage.imageUrl ? (

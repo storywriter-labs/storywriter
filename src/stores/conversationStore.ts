@@ -129,6 +129,7 @@ const EMPTY_STORY: StoryContent = {
   content: null,
   sections: [],
   storyId: null,
+  name: null,
 };
 
 // ---------------------------------------------------------------------------
