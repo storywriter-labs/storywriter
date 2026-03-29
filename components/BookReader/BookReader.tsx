@@ -23,6 +23,7 @@ import storyGenerationService from '@/services/storyGenerationService';
 
 interface BookReaderProps {
     sections?: StorySection[];
+    name?: string;
     onBack?: () => void;
 }
 
@@ -570,6 +571,11 @@ const BookReader = ({ sections: sectionsProp, onBack }: BookReaderProps = {}) =>
                             showsVerticalScrollIndicator={false}
                             scrollEnabled={true}
                         >
+
+                            {currentIndex === 0 && (
+                                <Text style={styles.storyName}>{name || story.name}</Text>
+                            )}
+
                             {isLoadingImage && !currentPage.imageUrl ? (
                                 <ShimmerPlaceholder />
                             ) : currentPage.imageUrl ? (
@@ -581,6 +587,7 @@ const BookReader = ({ sections: sectionsProp, onBack }: BookReaderProps = {}) =>
                             ) : null}
 
                             <Text style={styles.storyText}>
+
                                 {currentPage.text || currentPage.text}
                             </Text>
                         </ScrollView>

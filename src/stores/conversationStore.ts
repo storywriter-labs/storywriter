@@ -32,6 +32,7 @@ export interface StoryContent {
   content: string | null;
   sections: StorySection[];
   storyId: number | null;
+  name: string | null;
 }
 
 export interface SavedStory {
@@ -288,6 +289,7 @@ const useConversationStore = create<ConversationState>()(
                 content: result.story.pages.map(p => p.content).join('\n\n'),
                 sections,
                 storyId: result.story.storyId ?? null,
+                name: result.story.title ?? null,
               },
               phase: 'COMPLETE',
               storyGenerationProgress: null,
