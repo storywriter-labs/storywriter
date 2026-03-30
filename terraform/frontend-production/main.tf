@@ -11,7 +11,6 @@ terraform {
     bucket         = "storywriter-terraform-state-548846592016"
     key            = "frontend-production/terraform.tfstate"
     region         = "us-east-1"
-    profile        = "storywriter"
     encrypt        = true
     dynamodb_table = "storywriter-terraform-locks"
   }
@@ -19,7 +18,6 @@ terraform {
 
 provider "aws" {
   region = "us-east-1"
-  profile = "storywriter"
 
   default_tags {
     tags = {
