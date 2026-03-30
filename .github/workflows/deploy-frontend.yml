@@ -122,18 +122,20 @@ jobs:
         run: |
           echo "🔍 Validating infrastructure state..."
           
-          # Check if state file exists and has resources
-          if [ ! -f "terraform.tfstate" ] || [ "$(jq '.resources | length' terraform.tfstate 2>/dev/null || echo 0)" -eq 0 ]; then
-            echo "⚠️  No Terraform state found or state is empty"
-            echo "This suggests infrastructure exists but isn't tracked by Terraform"
-            echo "Running terraform apply to import and create missing resources..."
-            
+          # Check if remote state has resources
+          RESOURCE_COUNT=$(terraform state list 2>/dev/null | wc -l || echo 0)
+
+          if [ "$RESOURCE_COUNT" -eq 0 ]; then
+            echo "⚠️  No resources found in Terraform state"
+            echo "Running terraform apply to create infrastructure..."
             terraform apply -auto-approve
-            echo "✅ Infrastructure created/imported successfully"
+            echo "✅ Infrastructure created successfully"
           else
-            # State exists, validate it
+            echo "📋 Found $RESOURCE_COUNT resources in state"
+            # Validate with plan
+            EXIT_CODE=0
             terraform plan -detailed-exitcode || EXIT_CODE=$?
-            
+
             case $EXIT_CODE in
               0)
                 echo "✅ Infrastructure state is correct - no changes needed"
