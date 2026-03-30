@@ -11,6 +11,7 @@ terraform {
     bucket         = "storywriter-terraform-state-548846592016"
     key            = "frontend-staging/terraform.tfstate"
     region         = "us-east-1"
+    profile        = "storywriter"
     encrypt        = true
     dynamodb_table = "storywriter-terraform-locks"
   }
