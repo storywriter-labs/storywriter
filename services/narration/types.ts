@@ -70,4 +70,15 @@ export interface NarrationPlayer {
    * @param callback - Function to call when audio finishes
    */
   setCompletionCallback(callback: PlaybackCompletionCallback): void;
+
+  /**
+   * Play audio data immediately without caching as primary track
+   *
+   * Used for one-off conversation audio from ElevenLabs conversations.
+   * Does not affect the main narration player state.
+   *
+   * @param audioData - MP3 audio as Uint8Array from ElevenLabs
+   * @throws Error if audio data is invalid or playback fails
+   */
+  playOnce(audioData: Uint8Array): Promise<void>;
 }

@@ -9,6 +9,7 @@ import { conversationLogger, logger, LogCategory } from '@/src/utils/logger';
 import { TranscriptNormalizer, DialogueTurn } from '@/src/utils/transcriptNormalizer';
 import AudioVisualizer from '@/components/AudioVisualizer/AudioVisualizer';
 import { trackEvent, AnalyticsEvents } from '@/src/utils/analytics';
+import { createNarrationPlayer } from '@/services/narration';
 import { styles } from './ConversationInterface.style';
 
 interface Props {
@@ -201,24 +202,13 @@ const ConversationInterface = forwardRef<ConversationInterfaceRef, Props>(({ dis
               } else {
                 throw new Error('Unsupported audio data format');
               }
-              
-              const audioBlob = new Blob([audioArray.buffer as ArrayBuffer], { type: 'audio/mpeg' });
-              const audioUrl = URL.createObjectURL(audioBlob);
-              
-              const audio = new Audio(audioUrl);
-              audio.onended = () => {
-                URL.revokeObjectURL(audioUrl);
-              };
-              audio.onerror = (e) => {
-                logger.error(LogCategory.CONVERSATION, 'Audio playback error', { error: e });
-                URL.revokeObjectURL(audioUrl);
-              };
-              
-              audio.play().catch(error => {
+
+              const player = createNarrationPlayer();
+              player.playOnce(audioArray).catch(error => {
                 logger.error(LogCategory.CONVERSATION, 'Failed to play audio', { error });
               });
-              
-              logger.debug(LogCategory.CONVERSATION, 'Playing audio chunk', { 
+
+              logger.debug(LogCategory.CONVERSATION, 'Playing audio chunk', {
                 audioSize: audioArray.length
               });
             } catch (error) {
