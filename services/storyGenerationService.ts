@@ -1,56 +1,21 @@
-import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
-import Constants from 'expo-constants';
+import client from '../src/api/client';
 import { StoryGenerationResult } from '../types/story';
 import { logger, LogCategory } from '../src/utils/logger';
-
-const API_BASE_URL = Constants.expoConfig?.extra?.apiBaseUrl || 'http://127.0.0.1:8000';
 
 class StoryGenerationService {
 
     // ------------------------------------------------------------
-    // 1. AUTH HELPER
-    // ------------------------------------------------------------
-    private async getAuthToken(): Promise<string | null> {
-        if (Platform.OS === 'web') {
-            return localStorage.getItem('userToken');
-        }
-        return await SecureStore.getItemAsync('userToken');
-    }
-
-    // ------------------------------------------------------------
-    // 2. API CLIENT
+    // 1. API CLIENT
     // ------------------------------------------------------------
     private async postToApi<T>(endpoint: string, body: any): Promise<T> {
-        const token = await this.getAuthToken();
+        logger.debug(LogCategory.STORY_GENERATION, `POST ${endpoint}`);
 
-        if (!token) {
-            throw new Error('Unauthorized: Please log in to generate stories.');
-        }
+        const response = await client.post(endpoint, body);
 
-        logger.debug(LogCategory.STORY_GENERATION, `POST ${API_BASE_URL}${endpoint}`);
-
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify(body),
-        });
-
-        const json = await response.json();
-
-        if (!response.ok) {
-            const errorMessage = json.message || json.error || `HTTP ${response.status}`;
-            throw new Error(errorMessage);
-        }
-
-        logger.debug(LogCategory.STORY_GENERATION, 'API response', { response: json });
+        logger.debug(LogCategory.STORY_GENERATION, 'API response', { response: response.data });
 
         // Laravel returns data at top level now (no data wrapper)
-        return json.data || json;
+        return (response.data.data || response.data) as T;
     }
 
     // ------------------------------------------------------------
@@ -62,7 +27,7 @@ class StoryGenerationService {
         }
 
         try {
-            const response = await this.postToApi<any>('/api/stories/generate', {
+            const response = await this.postToApi<any>('/stories/generate', {
                 transcript: transcript.trim(),
                 options: { maxTokens: 2000, temperature: 0.7 },
             });
@@ -96,7 +61,7 @@ class StoryGenerationService {
     async generatePageImage(storyId: number, pageNumber: number): Promise<string | null> {
         try {
             const response = await this.postToApi<{ imageUrl: string }>(
-                `/api/stories/${storyId}/pages/${pageNumber}/image`,
+                `/stories/${storyId}/pages/${pageNumber}/image`,
                 {}
             );
             return response.imageUrl ?? null;
