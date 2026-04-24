@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
+import { Colors } from '@/constants/theme';
 
 interface AudioVisualizerProps {
   isActive: boolean;
@@ -81,9 +82,9 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ isActive, speaker }) 
 
   // Determine color based on speaker
   const getBarColor = () => {
-    if (speaker === 'user') return '#4ECDC4'; // Teal for user
-    if (speaker === 'agent') return '#FFD93D'; // Yellow for agent
-    return '#E0E0E0'; // Gray for none
+    if (speaker === 'user') return Colors.teal; // Teal for user
+    if (speaker === 'agent') return Colors.yellow; // Yellow for agent
+    return Colors.lightGray; // Gray for none
   };
 
   const barColor = getBarColor();

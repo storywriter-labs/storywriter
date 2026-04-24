@@ -9,6 +9,7 @@ import { conversationLogger, logger, LogCategory } from '@/src/utils/logger';
 import { TranscriptNormalizer, DialogueTurn } from '@/src/utils/transcriptNormalizer';
 import AudioVisualizer from '@/components/AudioVisualizer/AudioVisualizer';
 import { trackEvent, AnalyticsEvents } from '@/src/utils/analytics';
+import { Colors, Spacing, BorderRadius, FontSizes } from '@/constants/theme';
 
 interface Props {
   disabled?: boolean;
@@ -457,15 +458,17 @@ Agent: That's such a wonderful and heartwarming idea! I think we have everything
             </TouchableOpacity>
 
             {/* Test Button */}
-            <TouchableOpacity
-              style={[styles.testButton, disabled && styles.disabledButton]}
-              onPress={handleTestMode}
-              disabled={disabled}
-            >
-              <Text style={[styles.testButtonText, disabled && styles.disabledButtonText]}>
-                🧪 Skip to Story Generation (Test)
-              </Text>
-            </TouchableOpacity>
+            {__DEV__ && (
+              <TouchableOpacity
+                style={[styles.testButton, disabled && styles.disabledButton]}
+                onPress={handleTestMode}
+                disabled={disabled}
+              >
+                <Text style={[styles.testButtonText, disabled && styles.disabledButtonText]}>
+                  🧪 Skip to Story Generation (Test)
+                </Text>
+              </TouchableOpacity>
+            )}
           </>
         )}
 
@@ -527,38 +530,38 @@ ConversationInterface.displayName = 'ConversationInterface';
 const styles = {
   container: {
     flex: 1,
-    padding: 20,
+    padding: Spacing.lg,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.96)',
-    borderRadius: 32,
-    padding: 40,
+    backgroundColor: Colors.background,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.xxxl,
     maxWidth: 600,
     width: '100%' as const,
     alignItems: 'center' as const,
-    shadowColor: '#000',
+    shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.2,
     shadowRadius: 24,
     elevation: 12,
     borderWidth: 4,
-    borderColor: '#FFD93D',
+    borderColor: Colors.yellow,
   },
   primaryButton: {
-    backgroundColor: '#4ECDC4',
+    backgroundColor: Colors.teal,
     paddingHorizontal: 30,
     paddingVertical: 15,
-    borderRadius: 16,
-    marginBottom: 15,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.md,
     minWidth: 250,
     borderWidth: 2,
-    borderColor: '#45B8B0',
+    borderColor: Colors.tealDark,
   },
   primaryButtonText: {
-    color: 'white',
-    fontSize: 16,
+    color: Colors.white,
+    fontSize: FontSizes.md,
     fontWeight: 'bold' as const,
     textAlign: 'center' as const,
   },
@@ -566,16 +569,16 @@ const styles = {
     backgroundColor: '#ccc',
   },
   disabledButtonText: {
-    color: '#666',
+    color: Colors.darkGray,
   },
   audioContainer: {
     backgroundColor: 'rgba(78, 205, 196, 0.05)',
-    padding: 30,
-    borderRadius: 24,
-    marginBottom: 15,
+    padding: Spacing.xl,
+    borderRadius: BorderRadius.lg,
+    marginBottom: Spacing.md,
     alignItems: 'center' as const,
     borderWidth: 3,
-    borderColor: '#4ECDC4',
+    borderColor: Colors.teal,
     width: '100%' as const,
   },
   microphoneIcon: {
@@ -585,78 +588,78 @@ const styles = {
     backgroundColor: 'rgba(224, 224, 224, 0.3)',
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
-    marginBottom: 20,
+    marginBottom: Spacing.lg,
     borderWidth: 4,
     borderColor: '#E0E0E0',
   },
   microphoneIconUser: {
     backgroundColor: 'rgba(78, 205, 196, 0.2)',
-    borderColor: '#4ECDC4',
+    borderColor: Colors.teal,
     transform: [{ scale: 1.1 }],
   },
   microphoneIconAgent: {
     backgroundColor: 'rgba(255, 217, 61, 0.2)',
-    borderColor: '#FFD93D',
+    borderColor: Colors.yellow,
     transform: [{ scale: 1.1 }],
   },
   microphoneEmoji: {
     fontSize: 40,
   },
   speakerLabel: {
-    fontSize: 18,
-    color: '#4ECDC4',
-    marginBottom: 20,
+    fontSize: FontSizes.lg,
+    color: Colors.teal,
+    marginBottom: Spacing.lg,
     textAlign: 'center' as const,
     fontWeight: '600' as const,
   },
   helpText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: FontSizes.sm,
+    color: Colors.darkGray,
     textAlign: 'center' as const,
     fontStyle: 'italic' as const,
-    marginBottom: 15,
+    marginBottom: Spacing.md,
   },
   endButton: {
-    backgroundColor: '#FF6B6B',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 12,
+    backgroundColor: Colors.coral,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.sm,
     borderWidth: 2,
-    borderColor: '#E55B5B',
+    borderColor: Colors.coralDark,
   },
   endButtonText: {
-    color: 'white',
-    fontSize: 14,
+    color: Colors.white,
+    fontSize: FontSizes.sm,
     fontWeight: 'bold' as const,
   },
   processingContainer: {
     backgroundColor: 'rgba(255, 217, 61, 0.2)',
-    padding: 20,
-    borderRadius: 16,
-    marginBottom: 15,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.md,
     alignItems: 'center' as const,
     borderWidth: 2,
-    borderColor: '#FFD93D',
+    borderColor: Colors.yellow,
   },
   processingText: {
-    fontSize: 16,
-    color: '#E5C035',
+    fontSize: FontSizes.md,
+    color: Colors.yellowDark,
     textAlign: 'center' as const,
     fontWeight: '600' as const,
   },
   testButton: {
-    backgroundColor: '#FFD93D',
+    backgroundColor: Colors.yellow,
     paddingHorizontal: 30,
     paddingVertical: 12,
-    borderRadius: 16,
-    marginBottom: 10,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.sm,
     minWidth: 250,
     borderWidth: 2,
-    borderColor: '#E5C035',
+    borderColor: Colors.yellowDark,
   },
   testButtonText: {
     color: '#333',
-    fontSize: 14,
+    fontSize: FontSizes.sm,
     fontWeight: 'bold' as const,
     textAlign: 'center' as const,
   },

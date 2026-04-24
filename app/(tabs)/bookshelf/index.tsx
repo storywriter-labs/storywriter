@@ -16,6 +16,7 @@ import client from '@/src/api/client';
 import Layout from '@/components/Layout/Layout';
 import { parseStoryBody } from '@/src/utils/parseStoryBody';
 import { trackEvent, AnalyticsEvents } from '@/src/utils/analytics';
+import { Colors, Spacing, BorderRadius, FontSizes } from '@/constants/theme';
 
 interface ApiStory {
     id: number;
@@ -235,9 +236,9 @@ const styles = StyleSheet.create({
         marginBottom: 28,
     },
     header: {
-        fontSize: 40,
+        fontSize: FontSizes.massive,
         fontWeight: 'bold',
-        color: '#FF6B6B',
+        color: Colors.coral,
         textAlign: 'center',
         textShadowColor: 'rgba(255, 107, 107, 0.3)',
         textShadowOffset: { width: 2, height: 2 },
@@ -252,18 +253,18 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'space-between',
-        gap: 16,
+        gap: Spacing.md,
     },
 
     // --- story card ---
     card: {
         flexDirection: 'column',
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        borderRadius: 20,
+        backgroundColor: Colors.background,
+        borderRadius: BorderRadius.lg,
         borderWidth: 2,
-        borderColor: '#FFD93D',
-        padding: 16,
-        shadowColor: '#000',
+        borderColor: Colors.yellow,
+        padding: Spacing.md,
+        shadowColor: Colors.black,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.12,
         shadowRadius: 8,
@@ -271,13 +272,13 @@ const styles = StyleSheet.create({
     },
     cardImageContainer: {
         width: '100%',
-        marginBottom: 12,
+        marginBottom: Spacing.sm,
     },
     cardImage: {
         width: '100%',
         height: 200,
         borderRadius: 10,
-        backgroundColor: '#eee',
+        backgroundColor: Colors.lightestGray,
     },
     cardPlaceholder: {
         width: '100%',
@@ -296,71 +297,71 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     cardTitle: {
-        fontSize: 22,
+        fontSize: FontSizes.xxl,
         fontWeight: 'bold',
-        color: '#2D2D2D',
-        marginBottom: 4,
+        color: Colors.darkestGray,
+        marginBottom: Spacing.xs,
     },
     cardDate: {
-        fontSize: 14,
+        fontSize: FontSizes.sm,
         color: '#687076',
-        marginBottom: 8,
+        marginBottom: Spacing.sm,
     },
     cardPreview: {
-        fontSize: 15,
-        color: '#666',
+        fontSize: FontSizes.md,
+        color: Colors.darkGray,
         lineHeight: 22,
     },
 
     // --- empty state ---
     emptyCard: {
-        backgroundColor: 'rgba(255, 255, 255, 0.96)',
-        borderRadius: 32,
-        padding: 40,
+        backgroundColor: Colors.background,
+        borderRadius: BorderRadius.large,
+        padding: Spacing.xxxl,
         maxWidth: 600,
         width: '100%',
         alignItems: 'center',
-        shadowColor: '#000',
+        shadowColor: Colors.black,
         shadowOffset: { width: 0, height: 12 },
         shadowOpacity: 0.2,
         shadowRadius: 24,
         elevation: 12,
         borderWidth: 4,
-        borderColor: '#FFD93D',
+        borderColor: Colors.yellow,
     },
     emptyIcon: {
-        fontSize: 64,
-        marginBottom: 16,
+        fontSize: FontSizes.massive,
+        marginBottom: Spacing.md,
     },
     emptyTitle: {
-        fontSize: 28,
+        fontSize: FontSizes.huge,
         fontWeight: 'bold',
-        color: '#2D2D2D',
-        marginBottom: 8,
+        color: Colors.darkestGray,
+        marginBottom: Spacing.sm,
     },
     emptyText: {
-        fontSize: 18,
-        color: '#666',
+        fontSize: FontSizes.lg,
+        color: Colors.darkGray,
         textAlign: 'center',
         maxWidth: 400,
     },
 
     // --- error state ---
     errorText: {
-        fontSize: 18,
-        color: '#666',
+        fontSize: FontSizes.lg,
+        color: Colors.darkGray,
         textAlign: 'center',
-        marginBottom: 24,
+        marginBottom: Spacing.lg,
     },
     retryButton: {
-        backgroundColor: '#D35400',
+        backgroundColor: Colors.accent,
         paddingVertical: 14,
         paddingHorizontal: 32,
-        borderRadius: 12,
+        borderRadius: BorderRadius.sm,
     },
     retryButtonText: {
-        fontSize: 18,
+        fontSize: FontSizes.lg,
         fontWeight: '600',
-        color: '#fff',
+        color: Colors.white,
     },
 });

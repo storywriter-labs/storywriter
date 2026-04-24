@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import { useConversationStore } from '@/src/stores/conversationStore';
 import { trackEvent, AnalyticsEvents } from '@/src/utils/analytics';
+import { Colors, FontSizes, Spacing, BorderRadius } from '@/constants/theme';
 
 // --- CONFIGURATION ---
 const LOADING_MESSAGES = [
@@ -120,68 +121,68 @@ const styles = StyleSheet.create({
     zIndex: 999,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: Spacing.lg,
   },
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.96)',
-    borderRadius: 32,
-    padding: 40,
+    backgroundColor: Colors.background,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.xxxl,
     maxWidth: 600,
     width: '100%',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.2,
     shadowRadius: 24,
     elevation: 12,
     borderWidth: 4,
-    borderColor: '#FFD93D',
+    borderColor: Colors.yellow,
   },
   emojiLarge: {
-    fontSize: 80,
-    marginBottom: 20,
+    fontSize: FontSizes.enormous,
+    marginBottom: Spacing.lg,
   },
   messageText: {
-    fontSize: 24,
+    fontSize: FontSizes.xxxl,
     fontWeight: '600',
-    color: '#FF6B6B',
+    color: Colors.coral,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: Spacing.lg,
     minHeight: 60, // Prevents layout jump when text changes
   },
   subText: {
-    fontSize: 18,
-    color: '#4ECDC4',
-    marginTop: 20,
+    fontSize: FontSizes.lg,
+    color: Colors.teal,
+    marginTop: Spacing.lg,
     fontWeight: '600',
   },
   dotContainer: {
     flexDirection: 'row',
-    gap: 12,
+    gap: Spacing.sm,
   },
   dot: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#E5E5E5',
+    backgroundColor: Colors.lightGray,
   },
   dotActive: {
-    backgroundColor: '#4ECDC4',
+    backgroundColor: Colors.teal,
     transform: [{ scale: 1.3 }],
   },
   retryButton: {
-    backgroundColor: '#4ECDC4',
+    backgroundColor: Colors.teal,
     paddingHorizontal: 30,
     paddingVertical: 15,
-    borderRadius: 16,
-    marginTop: 20,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.lg,
     elevation: 5,
     borderWidth: 2,
-    borderColor: '#45B8B0',
+    borderColor: Colors.tealDark,
   },
   retryText: {
-    color: 'white',
-    fontSize: 18,
+    color: Colors.white,
+    fontSize: FontSizes.lg,
     fontWeight: 'bold',
   }
 });

@@ -1,16 +1,10 @@
 import { StyleSheet, Platform } from 'react-native';
-
-const THEME = {
-    paper: '#FAF9F6',
-    text: '#2D2D2D',
-    accent: '#D35400',
-};
-
+import { Colors } from '@/constants/theme';
 
 export const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: THEME.paper,
+        backgroundColor: Colors.paper,
         alignItems: 'center',
         justifyContent: 'center',
         width: '100%',
@@ -31,7 +25,7 @@ export const styles = StyleSheet.create({
     },
     pageNumber: {
         textAlign: 'center',
-        color: '#999',
+        color: Colors.gray,
         fontSize: 12,
         marginBottom: 10,
         textTransform: 'uppercase',
@@ -42,16 +36,16 @@ export const styles = StyleSheet.create({
         height: 300,
         borderRadius: 8,
         marginBottom: 20,
-        backgroundColor: '#eee',
+        backgroundColor: Colors.lightestGray,
         resizeMode: 'contain',
     },
     shimmerPlaceholder: {
-        backgroundColor: '#e0ddd8',
+        backgroundColor: Colors.lighterGray,
     },
     storyText: {
         fontSize: 22,
         lineHeight: 34,
-        color: THEME.text,
+        color: Colors.darkestGray,
         fontFamily: Platform.OS === 'web' ? 'Georgia, serif' : 'serif',
         textAlign: 'left',
         width: '100%',
@@ -78,7 +72,7 @@ export const styles = StyleSheet.create({
         width: 50,
         height: 50,
         borderRadius: 25,
-        backgroundColor: '#fff',
+        backgroundColor: Colors.white,
         alignItems: 'center',
         justifyContent: 'center',
         shadowColor: "#000",
@@ -87,7 +81,7 @@ export const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 4,
         borderWidth: 1,
-        borderColor: '#eee',
+        borderColor: Colors.lightestGray,
     },
     disabledBtn: {
         opacity: 0.3,
@@ -95,7 +89,7 @@ export const styles = StyleSheet.create({
     },
     navArrow: {
         fontSize: 32,
-        color: THEME.accent,
+        color: Colors.accent,
         marginTop: -4,
         fontWeight: '300',
     },
@@ -107,10 +101,10 @@ export const styles = StyleSheet.create({
         width: 8,
         height: 8,
         borderRadius: 4,
-        backgroundColor: '#ddd',
+        backgroundColor: Colors.lighterGray,
     },
     dotActive: {
-        backgroundColor: THEME.accent,
+        backgroundColor: Colors.accent,
         width: 12,
     },
     // END PAGE STYLES
@@ -126,13 +120,13 @@ export const styles = StyleSheet.create({
     endTitle: {
         fontSize: 36,
         fontWeight: 'bold',
-        color: THEME.text,
+        color: Colors.darkestGray,
         marginBottom: 10,
         textAlign: 'center',
     },
     endSubtitle: {
         fontSize: 18,
-        color: '#666',
+        color: Colors.darkGray,
         marginBottom: 40,
         textAlign: 'center',
     },
@@ -149,7 +143,7 @@ export const styles = StyleSheet.create({
         elevation: 3,
     },
     primaryButton: {
-        backgroundColor: THEME.accent,
+        backgroundColor: Colors.accent,
     },
     primaryButtonText: {
         fontSize: 20,
@@ -157,28 +151,28 @@ export const styles = StyleSheet.create({
         color: 'white',
     },
     secondaryButton: {
-        backgroundColor: '#fff',
+        backgroundColor: Colors.white,
         borderWidth: 2,
-        borderColor: THEME.accent,
+        borderColor: Colors.accent,
     },
     secondaryButtonText: {
         fontSize: 18,
         fontWeight: '600',
-        color: THEME.accent,
+        color: Colors.accent,
     },
     tertiaryButton: {
         backgroundColor: 'transparent',
     },
     tertiaryButtonText: {
         fontSize: 16,
-        color: '#666',
+        color: Colors.darkGray,
     },
     // BACK TO BOOKSHELF BUTTON
     backToBookshelfBtn: {
         position: 'absolute',
         bottom: 100,
         left: 20,
-        backgroundColor: 'rgba(250, 249, 246, 0.92)',
+        backgroundColor: `rgba(250, 249, 246, 0.92)`,
         borderRadius: 20,
         paddingVertical: 8,
         paddingHorizontal: 16,
@@ -193,13 +187,13 @@ export const styles = StyleSheet.create({
     },
     backToBookshelfBtnText: {
         fontSize: 15,
-        color: THEME.accent,
+        color: Colors.accent,
         fontWeight: '600',
     },
     storyName: {
         fontSize: 28,
         fontWeight: 'bold',
-        color: THEME.text,
+        color: Colors.darkestGray,
         textAlign: 'center',
         marginBottom: 16,
         fontFamily: Platform.OS === 'web' ? 'Georgia, serif' : 'serif',

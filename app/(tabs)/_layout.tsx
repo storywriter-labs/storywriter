@@ -3,6 +3,7 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { Colors } from '../../constants/theme';
 
 // The root layout sets background: 'transparent' so the auth screens can use
 // BackgroundImage freely.  That bleeds into tab screens on web — each inactive
@@ -10,7 +11,7 @@ import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 // to an opaque colour scoped to this navigator only.
 const tabTheme = {
     ...DefaultTheme,
-    colors: { ...DefaultTheme.colors, background: '#FAF9F6' },
+    colors: { ...DefaultTheme.colors, background: Colors.paper },
 };
 
 export default function TabLayout() {
@@ -21,13 +22,13 @@ export default function TabLayout() {
                 headerShown: false,
                 tabBarStyle: {
                     backgroundColor: '#F0F8FF', // Light cyan
-                    borderTopColor: '#FFD93D', // Golden yellow
+                    borderTopColor: Colors.yellow, // Golden yellow
                     borderTopWidth: 3,
                     paddingBottom: 8,
                     paddingTop: 8,
                     height: 70,
                 },
-                tabBarActiveTintColor: '#4ECDC4', // Turquoise
+                tabBarActiveTintColor: Colors.teal, // Turquoise
                 tabBarInactiveTintColor: '#687076', // Muted gray
                 tabBarLabelStyle: {
                     fontSize: 14,

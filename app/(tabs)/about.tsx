@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Layout from '../../components/Layout/Layout';
+import { Colors, Spacing, BorderRadius, FontSizes } from '../../constants/theme';
 
 export default function AboutScreen() {
   return (
@@ -26,31 +27,31 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: Spacing.lg,
   },
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.96)',
-    borderRadius: 32,
-    padding: 40,
+    backgroundColor: Colors.background,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.xxxl,
     maxWidth: 600,
     width: '100%',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.2,
     shadowRadius: 24,
     elevation: 12,
     borderWidth: 4,
-    borderColor: '#FFD93D',
+    borderColor: Colors.yellow,
   },
   titleContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: Spacing.lg,
   },
   title: {
-    fontSize: 48,
+    fontSize: FontSizes.enormous,
     fontWeight: 'bold',
-    color: '#FF6B6B',
+    color: Colors.coral,
     textAlign: 'center',
     textShadowColor: 'rgba(255, 107, 107, 0.3)',
     textShadowOffset: { width: 2, height: 2 },
@@ -59,15 +60,15 @@ const styles = StyleSheet.create({
   decorativeLine: {
     width: 160,
     height: 6,
-    backgroundColor: '#FFD93D',
+    backgroundColor: Colors.yellow,
     borderRadius: 3,
-    marginTop: 16,
+    marginTop: Spacing.md,
   },
   text: {
-    fontSize: 22,
-    color: '#666',
+    fontSize: FontSizes.xxl,
+    color: Colors.darkGray,
     textAlign: 'left',
     fontWeight: '500',
-    marginBottom: 20,
+    marginBottom: Spacing.lg,
   },
 });
