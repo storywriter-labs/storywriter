@@ -1,6 +1,7 @@
 import React, { forwardRef, useImperativeHandle, useCallback } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useConversationStore } from '@/src/stores/conversationStore';
+import { useStoryStore } from '@/src/stores/storyStore';
 import { logger } from '@/src/utils/logger';
 import AudioVisualizer from '@/components/AudioVisualizer/AudioVisualizer';
 import { useConversation } from '@/src/hooks/useConversation';
@@ -18,6 +19,7 @@ export interface ConversationInterfaceRef {
 const ConversationInterface = forwardRef<ConversationInterfaceRef, Props>(({ disabled = false, hideButtons = false }, ref) => {
   const phase = useConversationStore(s => s.phase);
   const storeEndConversation = useConversationStore(s => s.endConversation);
+  const generateStoryAutomatically = useStoryStore(s => s.generateStoryAutomatically);
   const { startConversation, endConversation, currentSpeaker, isConnecting, isActive } = useConversation();
 
   // Expose startConversation to parent via ref
@@ -47,7 +49,10 @@ User: Yeah! Kids who are scared to read out loud but the dragon makes them feel 
 Agent: That's such a wonderful and heartwarming idea! I think we have everything we need to create your story about a brave, helpful dragon in a magical library. Let me create that story for you now!`;
 
     storeEndConversation(testTranscript);
-  }, [disabled, storeEndConversation]);
+    setTimeout(() => {
+      void generateStoryAutomatically(testTranscript);
+    }, 500);
+  }, [disabled, storeEndConversation, generateStoryAutomatically]);
 
   // Don't render the card at all when buttons are hidden and no active conversation
   if (hideButtons && !isActive && phase !== 'GENERATING') {

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import ElevenLabsService from '@/services/elevenLabsService';
 import { ConversationSession, ConversationMessage as ElevenLabsMessage } from '@/types/elevenlabs';
 import { useConversationStore } from '@/src/stores/conversationStore';
+import { useStoryStore } from '@/src/stores/storyStore';
 import { useErrorHandler } from '@/src/hooks/useErrorHandler';
 import { ErrorType, ErrorSeverity } from '@/src/utils/errorHandler';
 import { conversationLogger, logger, LogCategory } from '@/src/utils/logger';
@@ -40,6 +41,7 @@ export const useConversation = (): UseConversationReturn => {
   const phase = useConversationStore(s => s.phase);
   const storeStartConversation = useConversationStore(s => s.startConversation);
   const storeEndConversation = useConversationStore(s => s.endConversation);
+  const generateStoryAutomatically = useStoryStore(s => s.generateStoryAutomatically);
 
   const { handleError } = useErrorHandler({
     showAlert: true,
@@ -88,7 +90,11 @@ export const useConversation = (): UseConversationReturn => {
 
     setConversationSession(null);
     storeEndConversation(finalTranscript);
-  }, [conversationSession, handleError, storeEndConversation]);
+
+    setTimeout(() => {
+      void generateStoryAutomatically(finalTranscript);
+    }, 500);
+  }, [conversationSession, handleError, storeEndConversation, generateStoryAutomatically]);
 
   // Validate and process transcript
   const processTranscriptAndEnd = useCallback(() => {

@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { styles } from './BookReader.style';
 import { useConversationStore } from '@/src/stores/conversationStore';
+import { useStoryStore } from '@/src/stores/storyStore';
+import { useNarrationStore } from '@/src/stores/narrationStore';
 import { StorySection } from '@/types/story';
 import { createNarrationPlayer } from '@/services/narration';
 import type { NarrationPlayer } from '@/services/narration';
@@ -61,17 +63,19 @@ const ShimmerPlaceholder = () => {
 };
 
 const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = {}) => {
-    const story = useConversationStore(s => s.story);
+    const story = useStoryStore(s => s.story);
+    const updatePageImage = useStoryStore(s => s.updatePageImage);
     const resetConversation = useConversationStore(s => s.resetConversation);
-    const isNarrationEnabled = useConversationStore(s => s.isNarrationEnabled);
-    const isNarrationPlaying = useConversationStore(s => s.isNarrationPlaying);
-    const isLoadingAudio = useConversationStore(s => s.isLoadingAudio);
-    const autoAdvancePages = useConversationStore(s => s.autoAdvancePages);
-    const isRateLimited = useConversationStore(s => s.isRateLimited);
-    const setNarrationPlaying = useConversationStore(s => s.setNarrationPlaying);
-    const setLoadingAudio = useConversationStore(s => s.setLoadingAudio);
-    const setRateLimited = useConversationStore(s => s.setRateLimited);
-    const updatePageImage = useConversationStore(s => s.updatePageImage);
+    const resetStory = useStoryStore(s => s.resetStory);
+    const resetNarration = useNarrationStore(s => s.resetNarration);
+    const isNarrationEnabled = useNarrationStore(s => s.isNarrationEnabled);
+    const isNarrationPlaying = useNarrationStore(s => s.isNarrationPlaying);
+    const isLoadingAudio = useNarrationStore(s => s.isLoadingAudio);
+    const autoAdvancePages = useNarrationStore(s => s.autoAdvancePages);
+    const isRateLimited = useNarrationStore(s => s.isRateLimited);
+    const setNarrationPlaying = useNarrationStore(s => s.setNarrationPlaying);
+    const setLoadingAudio = useNarrationStore(s => s.setLoadingAudio);
+    const setRateLimited = useNarrationStore(s => s.setRateLimited);
 
     const pages = useMemo(() =>
         (sectionsProp && sectionsProp.length > 0)
@@ -371,8 +375,10 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
 
     const handleNewStory = () => {
         trackEvent(AnalyticsEvents.STORY_END_ACTION, { action: 'new_story' });
-        // Reset the entire conversation store to start fresh
+        // Reset all stores to start fresh
         resetConversation();
+        resetStory();
+        resetNarration();
         // This will trigger the app to go back to the voice assistant/story input
     };
 
@@ -383,12 +389,16 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
         if (Platform.OS !== 'web') {
             // Option 1: Reset to beginning
             resetConversation();
+            resetStory();
+            resetNarration();
 
             // Option 2: Or if you have BackHandler for Android
             // BackHandler.exitApp();
         } else {
             // On web, just reset to beginning
             resetConversation();
+            resetStory();
+            resetNarration();
         }
     };
 

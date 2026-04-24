@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useConversationStore } from '@/src/stores/conversationStore';
+import { useNarrationStore } from '@/src/stores/narrationStore';
 import { styles } from './NarrationControls.style';
 
 interface NarrationControlsProps {
@@ -15,9 +15,9 @@ interface NarrationControlsProps {
 }
 
 export function NarrationControls({ onPlay, onPause, errorMessage, onRetry }: NarrationControlsProps) {
-    const isNarrationPlaying = useConversationStore(s => s.isNarrationPlaying);
-    const isLoadingAudio = useConversationStore(s => s.isLoadingAudio);
-    const isRateLimited = useConversationStore(s => s.isRateLimited);
+    const isNarrationPlaying = useNarrationStore(s => s.isNarrationPlaying);
+    const isLoadingAudio = useNarrationStore(s => s.isLoadingAudio);
+    const isRateLimited = useNarrationStore(s => s.isRateLimited);
 
     return (
         <View style={styles.container}>

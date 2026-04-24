@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
 import { useConversationStore } from '@/src/stores/conversationStore';
+import { useStoryStore } from '@/src/stores/storyStore';
+import { useErrorStore } from '@/src/stores/errorStore';
 import { trackEvent, AnalyticsEvents } from '@/src/utils/analytics';
 import { Colors, FontSizes, Spacing, BorderRadius } from '@/constants/theme';
 
@@ -86,8 +88,9 @@ interface Props {
 }
 
 const StoryGenerationSplash: React.FC<Props> = ({ isVisible }) => {
-  const getError = useConversationStore(s => s.getError);
-  const retryStoryGeneration = useConversationStore(s => s.retryStoryGeneration);
+  const getError = useErrorStore(s => s.getError);
+  const finalTranscript = useConversationStore(s => s.finalTranscript);
+  const retryStoryGeneration = useStoryStore(s => s.retryStoryGeneration);
   const retryCountRef = useRef(0);
 
   // Check if we have a specific generation error
@@ -98,7 +101,7 @@ const StoryGenerationSplash: React.FC<Props> = ({ isVisible }) => {
     trackEvent(AnalyticsEvents.STORY_GENERATION_RETRIED, {
       retry_count: retryCountRef.current,
     });
-    void retryStoryGeneration();
+    void retryStoryGeneration(finalTranscript);
   };
 
   if (!isVisible) return null;

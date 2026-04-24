@@ -5,7 +5,7 @@ import client from '@/src/api/client';
 import BookReader from '@/components/BookReader/BookReader';
 import { parseStoryBody } from '@/src/utils/parseStoryBody';
 import { StorySection } from '@/types/story';
-import { useConversationStore } from '@/src/stores/conversationStore';
+import { useStoryStore } from '@/src/stores/storyStore';
 
 export default function StoryDetailScreen() {
     const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -30,8 +30,8 @@ export default function StoryDetailScreen() {
                     }));
                     setSections(mappedSections);
 
-                    // Set story data in conversation store for lazy image loading
-                    useConversationStore.setState({
+                    // Set story data in story store for lazy image loading
+                    useStoryStore.setState({
                         story: {
                             content: story.body || null,
                             sections: mappedSections,
