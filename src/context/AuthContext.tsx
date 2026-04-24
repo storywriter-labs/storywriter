@@ -4,6 +4,7 @@ import client from '../api/client';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { identifyUser, resetUser } from '../utils/analytics';
+import { logger, LogCategory } from '../utils/logger';
 
 // Define the shape of the context for TypeScript (Optional but good)
 interface User {
@@ -44,7 +45,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     identifyUser(data, Platform.OS);
                 }
             } catch (e) {
-                console.log("Load User Failed:", e);
+                logger.debug(LogCategory.SYSTEM, 'Load User Failed', { error: e });
                 await logout();
             } finally {
                 setLoading(false);
@@ -63,7 +64,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         });
 
         // 2. DEBUG: Log the structure to be 100% sure
-        console.log("LOGIN RESPONSE:", response.data);
+        logger.debug(LogCategory.SYSTEM, 'Login response', { response: response.data });
 
         // 3. Handle the response data
         // WARNING: Ensure your API returns { token: "...", user: {...} }

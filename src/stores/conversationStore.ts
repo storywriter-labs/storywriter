@@ -275,7 +275,7 @@ const useConversationStore = create<ConversationState>()(
             );
           }
 
-          console.log('Store received story:', JSON.stringify(result.story));
+          logger.debug(LogCategory.STORY_GENERATION, 'Store received story', { story: result.story });
 
           // Map API pages to StorySection format
           const sections = result.story.pages.map(page => ({

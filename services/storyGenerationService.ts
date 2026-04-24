@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
 import { StoryGenerationResult } from '../types/story';
+import { logger, LogCategory } from '../src/utils/logger';
 
 const API_BASE_URL = Constants.expoConfig?.extra?.apiBaseUrl || 'http://127.0.0.1:8000';
 
@@ -27,7 +28,7 @@ class StoryGenerationService {
             throw new Error('Unauthorized: Please log in to generate stories.');
         }
 
-        console.log(`POST ${API_BASE_URL}${endpoint}`);
+        logger.debug(LogCategory.STORY_GENERATION, `POST ${API_BASE_URL}${endpoint}`);
 
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: 'POST',
@@ -46,7 +47,7 @@ class StoryGenerationService {
             throw new Error(errorMessage);
         }
 
-        console.log('API response:', JSON.stringify(json));
+        logger.debug(LogCategory.STORY_GENERATION, 'API response', { response: json });
 
         // Laravel returns data at top level now (no data wrapper)
         return json.data || json;
@@ -78,8 +79,8 @@ class StoryGenerationService {
                 throw new Error('No pages returned from story generator');
             }
 
-            console.log('Story pages count:', story.pages.length);
-            console.log('Story object:', JSON.stringify(story));
+            logger.debug(LogCategory.STORY_GENERATION, `Story pages count: ${story.pages.length}`);
+            logger.debug(LogCategory.STORY_GENERATION, 'Story object', { story });
 
             return { success: true, story };
 
