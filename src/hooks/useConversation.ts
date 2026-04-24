@@ -5,7 +5,7 @@ import { useConversationStore } from '@/src/stores/conversationStore';
 import { useErrorHandler } from '@/src/hooks/useErrorHandler';
 import { ErrorType, ErrorSeverity } from '@/src/utils/errorHandler';
 import { conversationLogger, logger, LogCategory } from '@/src/utils/logger';
-import { TranscriptNormalizer, DialogueTurn } from '@/src/utils/transcriptNormalizer';
+import { TranscriptProcessor } from '@/src/utils/transcriptProcessor';
 import { trackEvent, AnalyticsEvents } from '@/src/utils/analytics';
 import { createNarrationPlayer } from '@/services/narration';
 import { extractAudioFromMessage } from '@/services/narration/audioDecoder';
@@ -93,31 +93,11 @@ export const useConversation = (): UseConversationReturn => {
   // Validate and process transcript
   const processTranscriptAndEnd = useCallback(() => {
     const messageList = rawMessages.current;
-    const userMessages = messageList.filter(msg => msg.role === 'user');
+    const finalTranscript = TranscriptProcessor.validateAndProcess(messageList);
 
-    if (userMessages.length < 2) {
-      logger.warn(LogCategory.CONVERSATION, 'Insufficient user messages for story generation', {
-        totalMessages: messageList.length,
-        userMessages: userMessages.length,
-        minRequired: 2
-      });
+    if (!finalTranscript) {
       return;
     }
-
-    const dialogueTurns: DialogueTurn[] = messageList.map(msg => ({
-      role: msg.role,
-      content: msg.content,
-      timestamp: msg.timestamp
-    }));
-
-    const finalTranscript = TranscriptNormalizer.generateTranscript(dialogueTurns);
-
-    logger.info(LogCategory.CONVERSATION, 'Generated final transcript with validation passed', {
-      originalMessages: messageList.length,
-      userMessages: userMessages.length,
-      processedLength: finalTranscript.length,
-      fullTranscript: finalTranscript
-    });
 
     pendingFlushRef.current = false;
     void handleEndConversationInternal(finalTranscript);
@@ -333,13 +313,7 @@ export const useConversation = (): UseConversationReturn => {
         });
       }
 
-      const dialogueTurns: DialogueTurn[] = messageList.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-        timestamp: msg.timestamp
-      }));
-
-      const finalTranscript = TranscriptNormalizer.generateTranscript(dialogueTurns);
+      const finalTranscript = TranscriptProcessor.processTranscript(messageList);
 
       logger.info(LogCategory.CONVERSATION, 'Manual end with real transcript', {
         messageCount: messageList.length,
