@@ -7,19 +7,19 @@ import Constants from 'expo-constants';
 const API_BASE_URL = Constants.expoConfig?.extra?.apiBaseUrl || 'http://127.0.0.1:8000';
 const baseURL = `${API_BASE_URL}/api`;
 
-const client = axios.create({ baseURL });
+const client = axios.create({
+    baseURL,
+    withCredentials: Platform.OS === 'web', // Use cookies for web, tokens for native
+});
 
-// Interceptor to add Token to every request
+// Interceptor to add Token to native requests only
 client.interceptors.request.use(async (config) => {
-    let token;
-    if (Platform.OS === 'web') {
-        token = window.localStorage.getItem('userToken'); // Simple storage for Web
-    } else {
-        token = await SecureStore.getItemAsync('userToken'); // Secure storage for Mobile
-    }
-
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+    // Web uses cookies, only native needs Bearer tokens
+    if (Platform.OS !== 'web') {
+        const token = await SecureStore.getItemAsync('userToken');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
     }
     return config;
 });
