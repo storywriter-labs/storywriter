@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StoryPage } from '@/types/story';
 import ElevenLabsService from '@/services/elevenLabsService';
 import StoryGenerationService from '@/services/storyGenerationService';
+import SavedStoriesService from '@/services/savedStoriesService';
 import { AudioGenerationResult } from '@/types/elevenlabs';
 import { ErrorHandler, ErrorType, ErrorSeverity, AppError } from '@/src/utils/errorHandler';
 import { logger, audioLogger, LogCategory } from '@/src/utils/logger';
@@ -405,11 +406,11 @@ const useConversationStore = create<ConversationState>()(
       updateStoryElements: (elements) => set({ storyElements: elements }),
 
       saveStory: async (title?) => {
-        const { storyPages, storyElements, savedStories } = get();
+        const { storyPages, storyElements, savedStories, story } = get();
         if (!storyPages.length) throw new Error('No story to save');
 
         const newStory: SavedStory = {
-          id: Date.now().toString(),
+          id: story.storyId?.toString() || Date.now().toString(),
           title: title || `Story — ${new Date().toLocaleDateString()}`,
           content: storyPages,
           elements: storyElements,
@@ -417,9 +418,23 @@ const useConversationStore = create<ConversationState>()(
         };
 
         const updated = [...savedStories, newStory];
+
         try {
+          // Save to AsyncStorage as a local cache
           await AsyncStorage.setItem('savedStories', JSON.stringify(updated));
           set({ savedStories: updated });
+
+          // If this story has a backend ID, also save it to the backend
+          if (story.storyId) {
+            try {
+              await SavedStoriesService.saveStory(story.storyId);
+              logger.debug(LogCategory.STORY_GENERATION, `Story ${story.storyId} saved to backend`);
+            } catch (backendError) {
+              const msg = backendError instanceof Error ? backendError.message : String(backendError);
+              logger.warn(LogCategory.STORY_GENERATION, `Failed to sync story to backend: ${msg}`);
+              // Continue anyway - local storage is sufficient
+            }
+          }
         } catch (error) {
           const appError = ErrorHandler.fromUnknown(error, ErrorType.STORAGE, ErrorSeverity.MEDIUM, { action: 'save_story' });
           get().addError('storage_save', appError);
@@ -442,13 +457,62 @@ const useConversationStore = create<ConversationState>()(
       },
 
       loadSavedStories: async () => {
+        const localStories: SavedStory[] = [];
+
+        // Load from AsyncStorage first (offline cache)
         try {
           const stored = await AsyncStorage.getItem('savedStories');
-          if (stored) set({ savedStories: JSON.parse(stored) });
+          if (stored) {
+            localStories.push(...JSON.parse(stored));
+          }
         } catch (error) {
-          const appError = ErrorHandler.fromUnknown(error, ErrorType.STORAGE, ErrorSeverity.LOW, { action: 'load_saved_stories' });
-          get().addError('storage_load', appError);
-          throw appError;
+          logger.warn(LogCategory.STORY_GENERATION, 'Failed to load local stories from AsyncStorage', { error: (error as Error).message });
+        }
+
+        // Try to fetch from backend and merge
+        try {
+          const backendStories = await SavedStoriesService.getSavedStories();
+          logger.debug(LogCategory.STORY_GENERATION, `Loaded ${backendStories.length} stories from backend`);
+
+          // Create SavedStory objects from backend stories (for UI compatibility)
+          const backendSavedStories: SavedStory[] = backendStories.map(bs => ({
+            id: bs.id.toString(),
+            title: bs.name,
+            content: [], // Backend stories don't have full content; they're just references
+            elements: {},
+            createdAt: new Date(bs.created_at).getTime(),
+          }));
+
+          // Merge: prefer backend stories, add local-only stories
+          const merged: SavedStory[] = [];
+          const backendIds = new Set(backendSavedStories.map(s => s.id));
+
+          // Add all backend stories
+          merged.push(...backendSavedStories);
+
+          // Add local stories that aren't on the backend (offline-created stories)
+          for (const localStory of localStories) {
+            if (!backendIds.has(localStory.id)) {
+              merged.push(localStory);
+            }
+          }
+
+          set({ savedStories: merged });
+        } catch (backendError) {
+          const msg = backendError instanceof Error ? backendError.message : String(backendError);
+          logger.warn(LogCategory.STORY_GENERATION, 'Failed to load stories from backend, using local cache only', { error: msg });
+
+          // Fall back to local stories if backend fails
+          if (localStories.length > 0) {
+            set({ savedStories: localStories });
+          }
+
+          // Only throw if we also failed to load local stories
+          if (localStories.length === 0) {
+            const appError = ErrorHandler.fromUnknown(backendError, ErrorType.STORAGE, ErrorSeverity.LOW, { action: 'load_saved_stories' });
+            get().addError('storage_load', appError);
+            throw appError;
+          }
         }
       },
 
