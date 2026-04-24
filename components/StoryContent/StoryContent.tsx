@@ -16,7 +16,8 @@ import BookReader from '@/components/BookReader/BookReader';
  * @returns Book-like interface for story display.
  */
 const StoryContent: React.FC = () => {
-  const { isGenerating, story } = useConversationStore();
+  const isGenerating = useConversationStore(s => s.isGenerating);
+  const story = useConversationStore(s => s.story);
   const sections = story.sections;
 
   // 1. LOADING STATE

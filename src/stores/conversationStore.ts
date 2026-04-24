@@ -9,6 +9,23 @@ import { ErrorHandler, ErrorType, ErrorSeverity, AppError } from '@/src/utils/er
 import { logger, audioLogger, LogCategory } from '@/src/utils/logger';
 
 // ---------------------------------------------------------------------------
+// USAGE: Always use per-field selectors, NOT wholesale destructuring
+// ---------------------------------------------------------------------------
+// GOOD:
+//   const phase = useConversationStore(s => s.phase);
+//   const story = useConversationStore(s => s.story);
+//
+// BAD (causes unnecessary re-renders):
+//   const { phase, story, ... } = useConversationStore();
+//
+// For components needing many fields, consider using zustand/shallow:
+//   import { shallow } from 'zustand/react';
+//   const fields = useConversationStore(
+//     state => ({ phase: state.phase, story: state.story }),
+//     shallow
+//   );
+
+// ---------------------------------------------------------------------------
 // TYPES
 // ---------------------------------------------------------------------------
 

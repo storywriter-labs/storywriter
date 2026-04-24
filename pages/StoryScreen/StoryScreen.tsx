@@ -14,11 +14,9 @@ import { s } from './StoryScreen.style';
 
 const StoryScreen = () => {
   const isFocused = useIsFocused();
-  const {
-    story,
-    phase,
-    isGenerating
-  } = useConversationStore();
+  const story = useConversationStore(s => s.story);
+  const phase = useConversationStore(s => s.phase);
+  const isGenerating = useConversationStore(s => s.isGenerating);
 
   const conversationRef = useRef<ConversationInterfaceRef>(null);
   const currentPhase: ConversationPhase = phase;

@@ -31,11 +31,9 @@ const ConversationInterface = forwardRef<ConversationInterfaceRef, Props>(({ dis
   const conversationStartTimeRef = useRef<number>(0);
   
   // Simplified store usage - trust ElevenLabs for conversation management
-  const {
-    phase,
-    startConversation: storeStartConversation,
-    endConversation: storeEndConversation
-  } = useConversationStore();
+  const phase = useConversationStore(s => s.phase);
+  const storeStartConversation = useConversationStore(s => s.startConversation);
+  const storeEndConversation = useConversationStore(s => s.endConversation);
   
   const { handleError } = useErrorHandler({
     showAlert: true,

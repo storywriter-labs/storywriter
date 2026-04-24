@@ -86,7 +86,8 @@ interface Props {
 }
 
 const StoryGenerationSplash: React.FC<Props> = ({ isVisible }) => {
-  const { getError, retryStoryGeneration } = useConversationStore();
+  const getError = useConversationStore(s => s.getError);
+  const retryStoryGeneration = useConversationStore(s => s.retryStoryGeneration);
   const retryCountRef = useRef(0);
 
   // Check if we have a specific generation error

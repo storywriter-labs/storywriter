@@ -61,19 +61,17 @@ const ShimmerPlaceholder = () => {
 };
 
 const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = {}) => {
-    const {
-        story,
-        resetConversation,
-        isNarrationEnabled,
-        isNarrationPlaying,
-        isLoadingAudio,
-        autoAdvancePages,
-        isRateLimited,
-        setNarrationPlaying,
-        setLoadingAudio,
-        setRateLimited,
-        updatePageImage
-    } = useConversationStore();
+    const story = useConversationStore(s => s.story);
+    const resetConversation = useConversationStore(s => s.resetConversation);
+    const isNarrationEnabled = useConversationStore(s => s.isNarrationEnabled);
+    const isNarrationPlaying = useConversationStore(s => s.isNarrationPlaying);
+    const isLoadingAudio = useConversationStore(s => s.isLoadingAudio);
+    const autoAdvancePages = useConversationStore(s => s.autoAdvancePages);
+    const isRateLimited = useConversationStore(s => s.isRateLimited);
+    const setNarrationPlaying = useConversationStore(s => s.setNarrationPlaying);
+    const setLoadingAudio = useConversationStore(s => s.setLoadingAudio);
+    const setRateLimited = useConversationStore(s => s.setRateLimited);
+    const updatePageImage = useConversationStore(s => s.updatePageImage);
 
     const pages = useMemo(() =>
         (sectionsProp && sectionsProp.length > 0)

@@ -15,11 +15,9 @@ interface NarrationControlsProps {
 }
 
 export function NarrationControls({ onPlay, onPause, errorMessage, onRetry }: NarrationControlsProps) {
-    const {
-        isNarrationPlaying,
-        isLoadingAudio,
-        isRateLimited
-    } = useConversationStore();
+    const isNarrationPlaying = useConversationStore(s => s.isNarrationPlaying);
+    const isLoadingAudio = useConversationStore(s => s.isLoadingAudio);
+    const isRateLimited = useConversationStore(s => s.isRateLimited);
 
     return (
         <View style={styles.container}>
