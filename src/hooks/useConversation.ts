@@ -8,6 +8,7 @@ import { conversationLogger, logger, LogCategory } from '@/src/utils/logger';
 import { TranscriptNormalizer, DialogueTurn } from '@/src/utils/transcriptNormalizer';
 import { trackEvent, AnalyticsEvents } from '@/src/utils/analytics';
 import { createNarrationPlayer } from '@/services/narration';
+import { extractAudioFromMessage } from '@/services/narration/audioDecoder';
 
 export interface ConversationMessage {
   role: 'user' | 'agent';
@@ -203,24 +204,10 @@ export const useConversation = (): UseConversationReturn => {
           // Handle audio messages from ElevenLabs
           if (message.type === 'audio' && (message.audio || message.data)) {
             try {
-              let audioArray: Uint8Array<ArrayBuffer>;
-
-              if (message.audio) {
-                const audioData = atob(message.audio);
-                audioArray = new Uint8Array(audioData.length);
-                for (let i = 0; i < audioData.length; i++) {
-                  audioArray[i] = audioData.charCodeAt(i);
-                }
-              } else if (message.data instanceof ArrayBuffer) {
-                audioArray = new Uint8Array(message.data);
-              } else if (typeof message.data === 'string') {
-                const audioData = atob(message.data);
-                audioArray = new Uint8Array(audioData.length);
-                for (let i = 0; i < audioData.length; i++) {
-                  audioArray[i] = audioData.charCodeAt(i);
-                }
-              } else {
-                throw new Error('Unsupported audio data format');
+              const audioArray = extractAudioFromMessage(message);
+              if (!audioArray) {
+                logger.warn(LogCategory.CONVERSATION, 'No audio data found in message');
+                return;
               }
 
               const player = createNarrationPlayer();
