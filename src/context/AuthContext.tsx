@@ -1,8 +1,7 @@
 // src/context/AuthContext.tsx  <-- Rename to .tsx
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
-import client from '../api/client';
+import client, { tokenStorage } from '../api/client';
 import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
 import { identifyUser, resetUser } from '../utils/analytics';
 import { logger, LogCategory } from '../utils/logger';
 
@@ -68,11 +67,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const logoutUser = useCallback(async () => {
         try {
-            // Web uses cookies (handled by browser); native uses SecureStore
-            if (Platform.OS !== 'web') {
-                await SecureStore.deleteItemAsync('userToken');
-                delete client.defaults.headers.common['Authorization'];
-            }
+            await tokenStorage.clear();
+            delete client.defaults.headers.common['Authorization'];
             resetUser();
         } catch (e) {
             logger.debug(LogCategory.SYSTEM, 'Logout error', { error: e });
@@ -85,17 +81,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const performLoadUser = useCallback(async () => {
         try {
-            // On native, check for stored token; on web, try the request directly (cookies are auto-sent)
-            if (Platform.OS !== 'web') {
-                const storedToken = await SecureStore.getItemAsync('userToken');
-                if (storedToken) {
-                    client.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
-                } else {
-                    // No token on native, not authenticated
-                    setLoading(false);
-                    return;
-                }
+            const storedToken = await tokenStorage.get();
+            if (!storedToken) {
+                setLoading(false);
+                return;
             }
+            client.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
 
             const { data } = await client.get('/user');
             setUser(data);
@@ -131,11 +122,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }, [performLoadUser]);
 
     const login = async (email: string, name: string, device_name: string) => {
-        // On web, fetch CSRF token first (cookie-based auth)
-        if (Platform.OS === 'web') {
-            await client.get('/sanctum/csrf-cookie');
-        }
-
         const response = await client.post('/login', {
             email,
             name,
@@ -147,12 +133,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const token = response.data.token;
         const userData = response.data.user;
 
-        // On web, session cookie is set automatically; on native, store the token
-        if (Platform.OS !== 'web') {
-            if (!token) throw new Error("No token received!");
-            await SecureStore.setItemAsync('userToken', token);
-            client.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        }
+        if (!token) throw new Error("No token received!");
+        await tokenStorage.set(token);
+        client.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
         setUser(userData);
         identifyUser(userData, Platform.OS);
