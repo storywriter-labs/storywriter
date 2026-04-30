@@ -16,6 +16,7 @@ import { setPostHogClient, trackEvent, AnalyticsEvents } from '../src/utils/anal
 
 const posthogApiKey = Constants.expoConfig?.extra?.POSTHOG_API_KEY ?? '';
 const posthogHost = Constants.expoConfig?.extra?.POSTHOG_HOST ?? 'https://us.i.posthog.com';
+const appEnv = Constants.expoConfig?.extra?.environment ?? 'development';
 
 export {
   ErrorBoundary,
@@ -65,7 +66,7 @@ export default function RootLayout() {
  */
 function PostHogProviderWrapper({ children }: { children: React.ReactNode }) {
   const client = useMemo(() => {
-    if (typeof window === 'undefined' || !posthogApiKey) {
+    if (typeof window === 'undefined' || !posthogApiKey || appEnv !== 'production') {
       return null;
     }
 

@@ -74,8 +74,14 @@ export function trackEvent(
   event: AnalyticsEvent | string,
   properties?: Record<string, string | number | boolean | null>,
 ): void {
+  if (!posthogClient) {
+    if (__DEV__) {
+      console.debug('[analytics] skipped (non-production):', event);
+    }
+    return;
+  }
   try {
-    posthogClient?.capture(event, properties);
+    posthogClient.capture(event, properties);
   } catch {
     // Silently ignore analytics failures — never break the app
   }
