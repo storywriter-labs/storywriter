@@ -29,7 +29,7 @@ class SavedStoriesService {
   async getSavedStories(): Promise<BackendStory[]> {
     try {
       logger.debug(LogCategory.STORY_GENERATION, 'Fetching saved stories from backend');
-      const response = await client.get<BackendStoriesListResponse>('/v1/stories/saved');
+      const response = await client.get<BackendStoriesListResponse>('/stories/saved');
 
       return response.data.data || [];
     } catch (error: any) {
@@ -41,7 +41,7 @@ class SavedStoriesService {
   async saveStory(storyId: number): Promise<BackendStory> {
     try {
       logger.debug(LogCategory.STORY_GENERATION, `Saving story ${storyId} to backend`);
-      const response = await client.post<BackendStoryResponse>(`/v1/stories/${storyId}/save`);
+      const response = await client.post<BackendStoryResponse>(`/stories/${storyId}/save`);
 
       return response.data.data;
     } catch (error: any) {
@@ -53,7 +53,7 @@ class SavedStoriesService {
   async unsaveStory(storyId: number): Promise<void> {
     try {
       logger.debug(LogCategory.STORY_GENERATION, `Unsaving story ${storyId} from backend`);
-      await client.delete(`/v1/stories/${storyId}/unsave`);
+      await client.delete(`/stories/${storyId}/unsave`);
     } catch (error: any) {
       logger.error(LogCategory.STORY_GENERATION, `Failed to unsave story ${storyId}`, { error: error.message });
       throw error;
