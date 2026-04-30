@@ -43,7 +43,7 @@
     "expo-status-bar": "~2.2.3",
     "expo-system-ui": "~5.0.10",
     "expo-web-browser": "~14.0.1",
-    "posthog-react-native": "^4.37.3",
+    "posthog-react-native": "^4.43.13",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.79.5",
