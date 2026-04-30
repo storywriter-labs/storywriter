@@ -13,6 +13,14 @@ jest.mock('@/src/utils/transcriptProcessor');
 jest.mock('@/src/utils/analytics');
 jest.mock('@/services/narration/audioDecoder');
 
+let mockGenerateStoryAutomatically = jest.fn().mockResolvedValue(undefined);
+
+jest.mock('@/src/stores/storyStore', () => ({
+  useStoryStore: jest.fn((selector: (store: { generateStoryAutomatically: jest.Mock }) => unknown) => {
+    return selector({ generateStoryAutomatically: mockGenerateStoryAutomatically });
+  }),
+}));
+
 // Create a mock store config that can be updated per test
 let mockStoreConfig = {
   phase: 'IDLE',
@@ -49,6 +57,9 @@ describe('useConversation', () => {
 
     // Reset store config to defaults
     setStoreConfig();
+
+    // Reset story store mock
+    mockGenerateStoryAutomatically = jest.fn().mockResolvedValue(undefined);
 
     // Mock ElevenLabsService
     mockStartConversationAgent = jest.fn();
@@ -392,6 +403,55 @@ describe('useConversation', () => {
       // Should not be called since there are no messages
       const storeEndConversation = mockStoreConfig.endConversation as jest.Mock;
       expect(storeEndConversation).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('skipConversation', () => {
+    it('should call store endConversation with the provided preset transcript', async () => {
+      const { result } = renderHook(() => useConversation());
+      const presetTranscript = 'User: I want a dragon story\n\nAgent: What kind of dragon?';
+
+      await act(async () => {
+        result.current.skipConversation(presetTranscript);
+      });
+
+      const storeEndConversation = mockStoreConfig.endConversation as jest.Mock;
+      expect(storeEndConversation).toHaveBeenCalledWith(presetTranscript);
+    });
+
+    it('should schedule story generation with the provided transcript', async () => {
+      const { result } = renderHook(() => useConversation());
+      const presetTranscript = 'User: I want a dragon story\n\nAgent: What kind of dragon?';
+
+      await act(async () => {
+        result.current.skipConversation(presetTranscript);
+      });
+
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+
+      expect(mockGenerateStoryAutomatically).toHaveBeenCalledWith(presetTranscript);
+    });
+
+    it('should end any active session before using the preset transcript', async () => {
+      const mockSession = {
+        endSession: jest.fn().mockResolvedValue(undefined),
+        conversation: { conversationId: 'test-456' },
+      };
+      mockStartConversationAgent.mockResolvedValue(mockSession);
+
+      const { result } = renderHook(() => useConversation());
+
+      await act(async () => {
+        result.current.startConversation();
+      });
+
+      await act(async () => {
+        result.current.skipConversation('User: Skip me\n\nAgent: Skipping!');
+      });
+
+      expect(mockSession.endSession).toHaveBeenCalled();
     });
   });
 

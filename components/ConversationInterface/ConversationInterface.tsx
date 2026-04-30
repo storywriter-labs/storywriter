@@ -5,6 +5,7 @@ import { useStoryStore } from '@/src/stores/storyStore';
 import { logger } from '@/src/utils/logger';
 import AudioVisualizer from '@/components/AudioVisualizer/AudioVisualizer';
 import { useConversation } from '@/src/hooks/useConversation';
+import { getRandomPresetTranscript } from '@/src/constants/presetTranscripts';
 import { styles } from './ConversationInterface.style';
 
 interface Props {
@@ -20,7 +21,7 @@ const ConversationInterface = forwardRef<ConversationInterfaceRef, Props>(({ dis
   const phase = useConversationStore(s => s.phase);
   const storeEndConversation = useConversationStore(s => s.endConversation);
   const generateStoryAutomatically = useStoryStore(s => s.generateStoryAutomatically);
-  const { startConversation, endConversation, currentSpeaker, isConnecting, isActive } = useConversation();
+  const { startConversation, skipConversation, currentSpeaker, isConnecting, isActive } = useConversation();
 
   // Expose startConversation to parent via ref
   useImperativeHandle(ref, () => ({
@@ -128,12 +129,12 @@ Agent: That's such a wonderful and heartwarming idea! I think we have everything
               The agent will automatically end the conversation when ready to create your story.
             </Text>
 
-            {/* End Conversation Button */}
+            {/* Skip Conversation Button */}
             <TouchableOpacity
               style={styles.endButton}
-              onPress={endConversation}
+              onPress={() => skipConversation(getRandomPresetTranscript())}
             >
-              <Text style={styles.endButtonText}>End Conversation</Text>
+              <Text style={styles.endButtonText}>Skip conversation - create a story</Text>
             </TouchableOpacity>
           </View>
         )}

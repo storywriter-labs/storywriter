@@ -20,6 +20,7 @@ export interface ConversationMessage {
 export interface UseConversationReturn {
   startConversation: () => void;
   endConversation: () => void;
+  skipConversation: (transcript: string) => void;
   messages: ConversationMessage[];
   currentSpeaker: 'user' | 'agent' | 'none';
   isConnecting: boolean;
@@ -300,6 +301,10 @@ export const useConversation = (): UseConversationReturn => {
     }
   };
 
+  const skipConversation = useCallback((transcript: string) => {
+    void handleEndConversationInternal(transcript);
+  }, [handleEndConversationInternal]);
+
   const endConversation = async () => {
     if (flushTimeoutRef.current) {
       clearTimeout(flushTimeoutRef.current);
@@ -335,6 +340,7 @@ export const useConversation = (): UseConversationReturn => {
   return {
     startConversation,
     endConversation,
+    skipConversation,
     messages,
     currentSpeaker,
     isConnecting,
