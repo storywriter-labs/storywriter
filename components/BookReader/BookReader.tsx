@@ -9,6 +9,7 @@ import {
     PanResponder,
     Animated
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { styles } from './BookReader.style';
 import { useConversationStore } from '@/src/stores/conversationStore';
 import { useStoryStore } from '@/src/stores/storyStore';
@@ -402,6 +403,17 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
         }
     };
 
+    const handleClose = useCallback(() => {
+        trackEvent(AnalyticsEvents.STORY_END_ACTION, { action: 'close' });
+        if (onBack) {
+            onBack();
+        } else {
+            resetConversation();
+            resetStory();
+            resetNarration();
+        }
+    }, [onBack, resetConversation, resetStory, resetNarration]);
+
     // Generate audio and lazy-load images on page change & track page views
     useEffect(() => {
         let cancelled = false;
@@ -650,6 +662,16 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
                     <Text style={styles.backToBookshelfBtnText}>‹ Bookshelf</Text>
                 </TouchableOpacity>
             )}
+
+            {/* CLOSE BUTTON */}
+            <TouchableOpacity
+                style={styles.closeButton}
+                onPress={handleClose}
+                accessibilityLabel="Close story"
+                accessibilityRole="button"
+            >
+                <Ionicons name="close" size={24} color="#666666" />
+            </TouchableOpacity>
         </View>
     );
 };
