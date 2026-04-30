@@ -230,9 +230,8 @@ Returns hardcoded list of supported models:
 ElevenLabs Agents combine speech recognition, language understanding, voice synthesis, and conversation management for interactive voice experiences.
 
 **StoryWriter Agent Configuration:**
-```typescript
-agentId: "agent_01jxvakybhfmnr3yqvwxwye3sj"
-```
+
+The agent ID is configured server-side via `ELEVENLABS_AGENT_ID` in the backend environment. The frontend does not hold or send the agent ID.
 
 ### Connection States
 

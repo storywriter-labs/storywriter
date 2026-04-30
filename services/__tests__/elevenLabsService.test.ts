@@ -50,10 +50,7 @@ describe('ElevenLabsService', () => {
 
       await service.startConversationAgent();
 
-      expect(client.post).toHaveBeenCalledWith(
-        '/conversation/sdk-credentials',
-        expect.objectContaining({ agentId: expect.any(String) })
-      );
+      expect(client.post).toHaveBeenCalledWith('/conversation/sdk-credentials');
       expect(client.get).not.toHaveBeenCalled();
     });
 
