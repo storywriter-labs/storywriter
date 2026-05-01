@@ -10,6 +10,7 @@ import {
     Animated
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '@/constants/theme';
 import { styles } from './BookReader.style';
 import { useConversationStore } from '@/src/stores/conversationStore';
 import { useStoryStore } from '@/src/stores/storyStore';
@@ -533,7 +534,7 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
             <View style={styles.pageWrapper}>
                 {isEndPage ? (
                     <View style={styles.endPageContainer}>
-                        <Text style={styles.endTitle}>The End! 🎉</Text>
+                        <Text style={styles.endTitle}>The End!</Text>
                         <Text style={styles.endSubtitle}>What would you like to do?</Text>
 
                         {onBack ? (
@@ -542,7 +543,10 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
                                     style={[styles.endButton, styles.primaryButton]}
                                     onPress={handleRestartStory}
                                 >
-                                    <Text style={styles.primaryButtonText}>🔄 Read Again</Text>
+                                    <View style={styles.endButtonContent}>
+                                        <Ionicons name="refresh" size={20} color="white" />
+                                        <Text style={styles.primaryButtonText}>Read Again</Text>
+                                    </View>
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
@@ -552,7 +556,10 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
                                         onBack?.();
                                     }}
                                 >
-                                    <Text style={styles.secondaryButtonText}>📚 Back to Bookshelf</Text>
+                                    <View style={styles.endButtonContent}>
+                                        <Ionicons name="library" size={20} color={Colors.accent} />
+                                        <Text style={styles.secondaryButtonText}>Back to Bookshelf</Text>
+                                    </View>
                                 </TouchableOpacity>
                             </>
                         ) : (
@@ -561,21 +568,30 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
                                     style={[styles.endButton, styles.primaryButton]}
                                     onPress={handleNewStory}
                                 >
-                                    <Text style={styles.primaryButtonText}>✨ Create New Story</Text>
+                                    <View style={styles.endButtonContent}>
+                                        <Ionicons name="sparkles" size={20} color="white" />
+                                        <Text style={styles.primaryButtonText}>Create New Story</Text>
+                                    </View>
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
                                     style={[styles.endButton, styles.secondaryButton]}
                                     onPress={handleRestartStory}
                                 >
-                                    <Text style={styles.secondaryButtonText}>🔄 Read Again</Text>
+                                    <View style={styles.endButtonContent}>
+                                        <Ionicons name="refresh" size={20} color={Colors.accent} />
+                                        <Text style={styles.secondaryButtonText}>Read Again</Text>
+                                    </View>
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
                                     style={[styles.endButton, styles.tertiaryButton]}
                                     onPress={handleExit}
                                 >
-                                    <Text style={styles.tertiaryButtonText}>🏠 Exit</Text>
+                                    <View style={styles.endButtonContent}>
+                                        <Ionicons name="home" size={18} color={Colors.darkGray} />
+                                        <Text style={styles.tertiaryButtonText}>Exit</Text>
+                                    </View>
                                 </TouchableOpacity>
                             </>
                         )}

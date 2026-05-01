@@ -1,22 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useConversationStore } from '@/src/stores/conversationStore';
 import { useStoryStore } from '@/src/stores/storyStore';
 import { useErrorStore } from '@/src/stores/errorStore';
 import { trackEvent, AnalyticsEvents } from '@/src/utils/analytics';
 import { Colors, FontSizes, Spacing, BorderRadius } from '@/constants/theme';
 
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
 // --- CONFIGURATION ---
-const LOADING_MESSAGES = [
-  { text: "Creating your story...", emoji: "✨", duration: 3000 },
-  { text: "Adding magical illustrations...", emoji: "🎨", duration: 3500 },
-  { text: "Almost ready!", emoji: "🌟", duration: 2000 }
+const LOADING_MESSAGES: { text: string; icon: IoniconName; duration: number }[] = [
+  { text: "Creating your story...", icon: "sparkles", duration: 3000 },
+  { text: "Adding magical illustrations...", icon: "color-palette", duration: 3500 },
+  { text: "Almost ready!", icon: "star", duration: 2000 }
 ];
 
 const ERROR_MESSAGES = [
-  "Oops! Our story machine needs a quick break. Let's try again! 🔧",
-  "The story elves are working extra hard! Please wait a moment... 🧝‍♀️",
-  "Sometimes even the best storytellers need a moment to think! 📚"
+  "Oops! Our story machine needs a quick break. Let's try again!",
+  "The story elves are working extra hard! Please wait a moment...",
+  "Sometimes even the best storytellers need a moment to think!"
 ];
 
 // --- SUB-COMPONENT: ERROR VIEW ---
@@ -25,10 +28,10 @@ const ErrorView = ({ onRetry }: { onRetry: () => void }) => {
 
   return (
     <View style={styles.card}>
-      <Text style={styles.emojiLarge}>😊</Text>
+      <Ionicons name="happy-outline" size={FontSizes.enormous} color={Colors.coral} style={styles.iconLarge} />
       <Text style={styles.messageText}>{randomMsg}</Text>
       <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
-        <Text style={styles.retryText}>Try Again! 🚀</Text>
+        <Text style={styles.retryText}>Try Again!</Text>
       </TouchableOpacity>
     </View>
   );
@@ -62,9 +65,9 @@ const LoadingView = () => {
 
   return (
     <View style={styles.card}>
-      {/* Bouncing Character */}
-      <Animated.View style={{ transform: [{ translateY: bounceAnim }] }}>
-        <Text style={styles.emojiLarge}>{current.emoji}</Text>
+      {/* Bouncing Icon */}
+      <Animated.View style={[styles.iconLarge, { transform: [{ translateY: bounceAnim }] }]}>
+        <Ionicons name={current.icon} size={FontSizes.enormous} color={Colors.coral} />
       </Animated.View>
 
       {/* Message */}
@@ -77,7 +80,7 @@ const LoadingView = () => {
         ))}
       </View>
 
-      <Text style={styles.subText}>Your amazing story is coming to life! 🌈</Text>
+      <Text style={styles.subText}>Your amazing story is coming to life!</Text>
     </View>
   );
 };
@@ -142,8 +145,7 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: Colors.yellow,
   },
-  emojiLarge: {
-    fontSize: FontSizes.enormous,
+  iconLarge: {
     marginBottom: Spacing.lg,
   },
   messageText: {

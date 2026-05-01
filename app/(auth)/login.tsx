@@ -49,7 +49,7 @@ export default function LoginScreen() {
 
         try {
             await login(email, name, deviceName);
-            Alert.alert('Welcome to StoryWriter! 🎉');
+            Alert.alert('Welcome to StoryWriter!');
         } catch (error: unknown) {
             console.error("Login Error:", error);
 
@@ -121,7 +121,7 @@ export default function LoginScreen() {
                             disabled={isLoading}
                         >
                             <Text style={styles.buttonText}>
-                                {isLoading ? 'Getting Ready...' : 'Enter the Lab! ✨'}
+                                {isLoading ? 'Getting Ready...' : 'Enter the Lab!'}
                             </Text>
                         </TouchableOpacity>
 

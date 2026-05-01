@@ -1,5 +1,7 @@
 import React, { forwardRef, useImperativeHandle, useCallback } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '@/constants/theme';
 import { useConversationStore } from '@/src/stores/conversationStore';
 import { useStoryStore } from '@/src/stores/storyStore';
 import { logger } from '@/src/utils/logger';
@@ -74,14 +76,21 @@ Agent: That's such a wonderful and heartwarming idea! I think we have everything
               onPress={startConversation}
               disabled={disabled || isConnecting || isActive}
             >
-              <Text style={[
-                styles.primaryButtonText,
-                (disabled || isConnecting || isActive) && styles.disabledButtonText
-              ]}>
-                {isConnecting ? '🔄 Connecting...' :
-                 isActive ? '🎤 Conversation Active' :
-                 '🤖 Talk with StoryWriter Agent'}
-              </Text>
+              <View style={styles.primaryButtonContent}>
+                <Ionicons
+                  name={isConnecting ? 'sync' : isActive ? 'mic' : 'chatbubbles'}
+                  size={20}
+                  color={(disabled || isConnecting || isActive) ? Colors.darkGray : Colors.white}
+                />
+                <Text style={[
+                  styles.primaryButtonText,
+                  (disabled || isConnecting || isActive) && styles.disabledButtonText
+                ]}>
+                  {isConnecting ? 'Connecting...' :
+                   isActive ? 'Conversation Active' :
+                   'Talk with StoryWriter Agent'}
+                </Text>
+              </View>
             </TouchableOpacity>
 
             {/* Test Button */}
@@ -91,9 +100,16 @@ Agent: That's such a wonderful and heartwarming idea! I think we have everything
                 onPress={handleTestMode}
                 disabled={disabled}
               >
-                <Text style={[styles.testButtonText, disabled && styles.disabledButtonText]}>
-                  🧪 Skip to Story Generation (Test)
-                </Text>
+                <View style={styles.primaryButtonContent}>
+                  <Ionicons
+                    name="flask"
+                    size={18}
+                    color={disabled ? Colors.darkGray : '#333'}
+                  />
+                  <Text style={[styles.testButtonText, disabled && styles.disabledButtonText]}>
+                    Skip to Story Generation (Test)
+                  </Text>
+                </View>
               </TouchableOpacity>
             )}
           </>
@@ -108,15 +124,26 @@ Agent: That's such a wonderful and heartwarming idea! I think we have everything
               currentSpeaker === 'user' && styles.microphoneIconUser,
               currentSpeaker === 'agent' && styles.microphoneIconAgent,
             ]}>
-              <Text style={styles.microphoneEmoji}>🎙️</Text>
+              <Ionicons name="mic" size={40} color={Colors.teal} />
             </View>
 
             {/* Speaker Label */}
-            <Text style={styles.speakerLabel}>
-              {currentSpeaker === 'user' && '🗣️ You are speaking'}
-              {currentSpeaker === 'agent' && '🤖 Agent is speaking'}
-              {currentSpeaker === 'none' && '👂 Listening...'}
-            </Text>
+            <View style={styles.speakerLabelRow}>
+              <Ionicons
+                name={
+                  currentSpeaker === 'user' ? 'person' :
+                  currentSpeaker === 'agent' ? 'chatbubbles' :
+                  'ear'
+                }
+                size={18}
+                color={Colors.teal}
+              />
+              <Text style={styles.speakerLabel}>
+                {currentSpeaker === 'user' && 'You are speaking'}
+                {currentSpeaker === 'agent' && 'Agent is speaking'}
+                {currentSpeaker === 'none' && 'Listening...'}
+              </Text>
+            </View>
 
             {/* Audio Visualizer */}
             <AudioVisualizer
@@ -142,9 +169,12 @@ Agent: That's such a wonderful and heartwarming idea! I think we have everything
         {/* Status Display */}
         {phase === 'GENERATING' && (
           <View style={styles.processingContainer}>
-            <Text style={styles.processingText}>
-              ✨ Creating your story from the conversation...
-            </Text>
+            <View style={styles.processingRow}>
+              <Ionicons name="sparkles" size={18} color={Colors.yellowDark} />
+              <Text style={styles.processingText}>
+                Creating your story from the conversation...
+              </Text>
+            </View>
           </View>
         )}
       </View>

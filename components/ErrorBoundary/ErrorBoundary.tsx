@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { logger, LogCategory } from '@/src/utils/logger';
 import { styles } from './ErrorBoundary.style';
 
@@ -46,10 +47,10 @@ class ErrorBoundary extends React.Component<Props, State> {
 
       return (
         <View style={styles.container}>
-          <Text style={styles.emoji}>😔</Text>
+          <Ionicons name="sad-outline" size={64} color="#6b46c1" style={styles.icon} />
           <Text style={styles.title}>Oops! Something went wrong</Text>
           <Text style={styles.message}>
-            Don't worry! Our story magic is still working. Try starting again! ✨
+            Don't worry! Our story magic is still working. Try starting again!
           </Text>
         </View>
       );

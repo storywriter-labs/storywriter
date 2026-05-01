@@ -8,8 +8,7 @@ export const styles = StyleSheet.create({
     backgroundColor: '#f8f9ff',
     paddingHorizontal: 20,
   },
-  emoji: {
-    fontSize: 60,
+  icon: {
     marginBottom: 20,
   },
   title: {

@@ -20,10 +20,6 @@ export const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 4,
     },
-    playPauseIcon: {
-        fontSize: 28,
-        color: Colors.white,
-    },
     errorContainer: {
         backgroundColor: Colors.errorLight,
         padding: 12,
@@ -59,5 +55,11 @@ export const styles = StyleSheet.create({
         fontSize: 14,
         color: Colors.white,
         fontWeight: '600',
+    },
+    retryButtonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
     },
 });

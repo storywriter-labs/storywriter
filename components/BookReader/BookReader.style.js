@@ -142,6 +142,12 @@ export const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 3,
     },
+    endButtonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+    },
     primaryButton: {
         backgroundColor: Colors.accent,
     },

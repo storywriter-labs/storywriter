@@ -33,6 +33,12 @@ export const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: Colors.tealDark,
   },
+  primaryButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
   primaryButtonText: {
     color: Colors.white,
     fontSize: FontSizes.md,
@@ -76,15 +82,18 @@ export const styles = StyleSheet.create({
     borderColor: Colors.yellow,
     transform: [{ scale: 1.1 }],
   },
-  microphoneEmoji: {
-    fontSize: 40,
-  },
   speakerLabel: {
     fontSize: FontSizes.lg,
     color: Colors.teal,
-    marginBottom: Spacing.lg,
     textAlign: 'center',
     fontWeight: '600',
+  },
+  speakerLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: Spacing.lg,
   },
   helpText: {
     fontSize: FontSizes.sm,
@@ -120,6 +129,12 @@ export const styles = StyleSheet.create({
     color: Colors.yellowDark,
     textAlign: 'center',
     fontWeight: '600',
+  },
+  processingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   testButton: {
     backgroundColor: Colors.yellow,

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 
 interface StoryReaderProps {
   story: string[];
@@ -38,8 +39,9 @@ const FloatingEndMenu: React.FC<StoryReaderProps> = ({ story, currentPage, setCu
       <TouchableOpacity
         style={styles.fab}
         onPress={() => setShowMenu(true)}
+        accessibilityLabel="Open menu"
       >
-        <Text style={styles.fabText}>☰</Text>
+        <Ionicons name="menu" size={28} color="white" />
       </TouchableOpacity>
 
       {/* Menu Modal */}
@@ -59,23 +61,30 @@ const FloatingEndMenu: React.FC<StoryReaderProps> = ({ story, currentPage, setCu
               style={styles.menuButton}
               onPress={handleRestartStory}
             >
-              <Text style={styles.menuButtonText}>🔄 Start Over</Text>
+              <View style={styles.menuButtonContent}>
+                <Ionicons name="refresh" size={20} color="#333" />
+                <Text style={styles.menuButtonText}>Start Over</Text>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.menuButton}
               onPress={handleNewStory}
             >
-              <Text style={styles.menuButtonText}>✨ New Story</Text>
+              <View style={styles.menuButtonContent}>
+                <Ionicons name="sparkles" size={20} color="#333" />
+                <Text style={styles.menuButtonText}>New Story</Text>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.menuButton, styles.exitButton]}
               onPress={handleExit}
             >
-              <Text style={[styles.menuButtonText, styles.exitButtonText]}>
-                🏠 Exit
-              </Text>
+              <View style={styles.menuButtonContent}>
+                <Ionicons name="home" size={20} color="#d32f2f" />
+                <Text style={[styles.menuButtonText, styles.exitButtonText]}>Exit</Text>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -152,6 +161,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 12,
     alignItems: 'center',
+  },
+  menuButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   menuButtonText: {
     fontSize: 18,

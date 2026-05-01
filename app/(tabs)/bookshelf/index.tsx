@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import client from '@/src/api/client';
 import Layout from '@/components/Layout/Layout';
 import { parseStoryBody } from '@/src/utils/parseStoryBody';
@@ -126,7 +127,7 @@ export default function BookshelfScreen() {
             <Layout>
                 <View style={styles.center}>
                     <View style={styles.emptyCard}>
-                        <Text style={styles.emptyIcon}>📖</Text>
+                        <Ionicons name="book-outline" size={FontSizes.massive} color={Colors.coral} style={styles.emptyIcon} />
                         <Text style={styles.emptyTitle}>No Stories Yet</Text>
                         <Text style={styles.emptyText}>
                             Head back to Home and create your first story!
@@ -184,7 +185,7 @@ export default function BookshelfScreen() {
                                 />
                             ) : (
                                 <View style={styles.cardPlaceholder}>
-                                    <Text style={styles.cardPlaceholderIcon}>📚</Text>
+                                    <Ionicons name="library-outline" size={48} color={Colors.darkGray} />
                                 </View>
                             )}
                         </View>
@@ -290,9 +291,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    cardPlaceholderIcon: {
-        fontSize: 48,
-    },
     cardContent: {
         flex: 1,
     },
@@ -330,7 +328,6 @@ const styles = StyleSheet.create({
         borderColor: Colors.yellow,
     },
     emptyIcon: {
-        fontSize: FontSizes.massive,
         marginBottom: Spacing.md,
     },
     emptyTitle: {
