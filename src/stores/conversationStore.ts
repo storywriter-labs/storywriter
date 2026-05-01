@@ -33,6 +33,7 @@ export interface ConversationState {
   // --- Conversation ---
   phase: ConversationPhase;
   finalTranscript: string;
+  conversationId: string | null;
 
   // --- Speech UI feedback ---
   isListening: boolean;
@@ -44,6 +45,7 @@ export interface ConversationState {
   startConversation: () => void;
   endConversation: (transcript: string) => void;
   setPhase: (phase: ConversationPhase) => void;
+  setConversationId: (conversationId: string | null) => void;
   setSpeechState: (state: Partial<Pick<ConversationState, 'isListening' | 'isSpeaking' | 'speechRate' | 'speechVolume'>>) => void;
   resetConversation: () => void;
 }
@@ -59,6 +61,7 @@ const useConversationStore = create<ConversationState>()(
       // --- Initial state ---
       phase: 'IDLE',
       finalTranscript: '',
+      conversationId: null,
       isListening: false,
       isSpeaking: false,
       speechRate: 1.0,
@@ -73,6 +76,7 @@ const useConversationStore = create<ConversationState>()(
         set({
           phase: 'ACTIVE',
           finalTranscript: '',
+          conversationId: null,
           isListening: false,
           isSpeaking: false,
         });
@@ -94,12 +98,20 @@ const useConversationStore = create<ConversationState>()(
 
       setPhase: (phase) => set({ phase }),
 
+      setConversationId: (conversationId) => {
+        logger.info(LogCategory.CONVERSATION, 'Captured ElevenLabs conversation ID', {
+          conversationId: conversationId ?? undefined,
+        });
+        set({ conversationId });
+      },
+
       setSpeechState: (speechState) => set((state) => ({ ...state, ...speechState })),
 
       resetConversation: () => {
         set({
           phase: 'IDLE',
           finalTranscript: '',
+          conversationId: null,
           isListening: false,
           isSpeaking: false,
         });

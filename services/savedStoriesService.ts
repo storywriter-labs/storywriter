@@ -38,10 +38,13 @@ class SavedStoriesService {
     }
   }
 
-  async saveStory(storyId: number): Promise<BackendStory> {
+  async saveStory(storyId: number, elevenLabsConversationId?: string | null): Promise<BackendStory> {
     try {
       logger.debug(LogCategory.STORY_GENERATION, `Saving story ${storyId} to backend`);
-      const response = await client.post<BackendStoryResponse>(`/stories/${storyId}/save`);
+      const body = elevenLabsConversationId
+        ? { elevenlabs_conversation_id: elevenLabsConversationId }
+        : {};
+      const response = await client.post<BackendStoryResponse>(`/stories/${storyId}/save`, body);
 
       return response.data.data;
     } catch (error: any) {

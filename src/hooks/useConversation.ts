@@ -42,6 +42,7 @@ export const useConversation = (): UseConversationReturn => {
   const phase = useConversationStore(s => s.phase);
   const storeStartConversation = useConversationStore(s => s.startConversation);
   const storeEndConversation = useConversationStore(s => s.endConversation);
+  const setConversationId = useConversationStore(s => s.setConversationId);
   const generateStoryAutomatically = useStoryStore(s => s.generateStoryAutomatically);
 
   const { handleError } = useErrorHandler({
@@ -293,6 +294,17 @@ export const useConversation = (): UseConversationReturn => {
       });
 
       setConversationSession(session);
+
+      try {
+        const elevenLabsConversationId = session.getId();
+        if (elevenLabsConversationId) {
+          setConversationId(elevenLabsConversationId);
+        }
+      } catch (idError) {
+        logger.warn(LogCategory.CONVERSATION, 'Failed to read ElevenLabs conversation ID from session', {
+          error: idError instanceof Error ? idError.message : String(idError),
+        });
+      }
     } catch (error) {
       setIsConnecting(false);
       handleError(error, ErrorType.CONVERSATION, ErrorSeverity.MEDIUM, {

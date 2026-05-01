@@ -9,6 +9,7 @@ import { AudioGenerationResult } from '@/types/elevenlabs';
 import { ErrorHandler, ErrorType, ErrorSeverity } from '@/src/utils/errorHandler';
 import { logger, audioLogger, LogCategory } from '@/src/utils/logger';
 import { useErrorStore } from '@/src/stores/errorStore';
+import { useConversationStore } from '@/src/stores/conversationStore';
 
 // ---------------------------------------------------------------------------
 // USAGE: Always use per-field selectors, NOT wholesale destructuring
@@ -54,6 +55,7 @@ export interface SavedStory {
   content: StoryPage[];
   elements: StoryElements;
   createdAt: number;
+  elevenLabsConversationId?: string | null;
 }
 
 export interface StoryState {
@@ -287,12 +289,15 @@ const useStoryStore = create<StoryState>()(
         const { storyPages, storyElements, savedStories, story } = get();
         if (!storyPages.length) throw new Error('No story to save');
 
+        const elevenLabsConversationId = useConversationStore.getState().conversationId;
+
         const newStory: SavedStory = {
           id: story.storyId?.toString() || Date.now().toString(),
           title: title || `Story — ${new Date().toLocaleDateString()}`,
           content: storyPages,
           elements: storyElements,
           createdAt: Date.now(),
+          elevenLabsConversationId,
         };
 
         const updated = [...savedStories, newStory];
@@ -305,7 +310,7 @@ const useStoryStore = create<StoryState>()(
           // If this story has a backend ID, also save it to the backend
           if (story.storyId) {
             try {
-              await SavedStoriesService.saveStory(story.storyId);
+              await SavedStoriesService.saveStory(story.storyId, elevenLabsConversationId);
               logger.debug(LogCategory.STORY_GENERATION, `Story ${story.storyId} saved to backend`);
             } catch (backendError) {
               const msg = backendError instanceof Error ? backendError.message : String(backendError);
