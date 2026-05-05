@@ -56,6 +56,15 @@ export const styles = StyleSheet.create({
         textAlign: 'left',
         width: '100%',
     },
+    storyName: {
+        fontSize: 28,
+        fontWeight: '700',
+        color: THEME.text,
+        fontFamily: Platform.OS === 'web' ? 'Georgia, serif' : 'serif',
+        textAlign: 'center',
+        marginBottom: 20,
+        width: '100%',
+    },
     navigationRow: {
         position: 'absolute',
         bottom: 20,

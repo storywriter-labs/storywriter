@@ -3,6 +3,18 @@ import { useState } from 'react';
 
 const PASSWORD = '48Crash';
 
+const gateStyles = {
+    container: {
+        display: 'flex',
+        flexDirection: 'column' as const,
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        gap: 12,
+    },
+    error: { color: 'red' },
+};
+
 export default function PasswordGate({ children }: { children: React.ReactNode }) {
     const [unlocked, setUnlocked] = useState(
         () => localStorage.getItem('gate') === '1'
@@ -13,7 +25,7 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
     if (unlocked) return children;
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: 12 }}>
+        <div style={gateStyles.container}>
             <h2>Storywriter</h2>
             <input
                 type="password"
@@ -22,7 +34,7 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && check()}
             />
-            {error && <p style={{ color: 'red' }}>Wrong password</p>}
+            {error && <p style={gateStyles.error}>Wrong password</p>}
             <button onClick={check}>Enter</button>
         </div>
     );
