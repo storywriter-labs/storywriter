@@ -62,7 +62,7 @@ export default function BookshelfScreen() {
     const fetchStories = useCallback(async () => {
         try {
             setLoading(true);
-            const { data } = await client.get('/v1/stories');
+            const { data } = await client.get('/stories');
             const stories: ApiStory[] = data.data;
 
             // Sort newest first, then build card data

@@ -18,7 +18,7 @@ export default function StoryDetailScreen() {
     useEffect(() => {
         const fetchStory = async () => {
             try {
-                const { data } = await client.get(`/v1/stories/${slug}`);
+                const { data } = await client.get(`/stories/${slug}`);
                 const story = data.data;
 
                 if (story.pages && story.pages.length > 0) {
