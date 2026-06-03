@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { logger, LogCategory } from '@/src/utils/logger';
+import { styles } from './ErrorBoundary.style';
 
 interface Props {
   children: React.ReactNode;
@@ -45,10 +47,10 @@ class ErrorBoundary extends React.Component<Props, State> {
 
       return (
         <View style={styles.container}>
-          <Text style={styles.emoji}>😔</Text>
+          <Ionicons name="sad-outline" size={64} color="#6b46c1" style={styles.icon} />
           <Text style={styles.title}>Oops! Something went wrong</Text>
           <Text style={styles.message}>
-            Don't worry! Our story magic is still working. Try starting again! ✨
+            Don't worry! Our story magic is still working. Try starting again!
           </Text>
         </View>
       );
@@ -57,33 +59,5 @@ class ErrorBoundary extends React.Component<Props, State> {
     return this.props.children;
   }
 }
-
-const styles = {
-  container: {
-    flex: 1,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-    backgroundColor: '#f8f9ff',
-    paddingHorizontal: 20,
-  },
-  emoji: {
-    fontSize: 60,
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold' as const,
-    color: '#4a5568',
-    textAlign: 'center' as const,
-    marginBottom: 15,
-  },
-  message: {
-    fontSize: 18,
-    color: '#6b46c1',
-    textAlign: 'center' as const,
-    lineHeight: 24,
-    fontWeight: '500' as const,
-  },
-};
 
 export default ErrorBoundary;

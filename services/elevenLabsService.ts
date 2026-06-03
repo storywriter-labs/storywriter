@@ -37,7 +37,6 @@ const DEFAULT_VOICE_SETTINGS = {
 export class ElevenLabsService {
   private defaultVoiceId: string;
   private defaultModelId: string;
-  private agentId: string;
   private currentConversation: ConversationSession | null = null;
   private connectionState: ConnectionState = ConnectionState.DISCONNECTED;
   private shutdownTimeout: NodeJS.Timeout | null = null;
@@ -46,7 +45,6 @@ export class ElevenLabsService {
   constructor() {
     this.defaultVoiceId = "56AoDkrOh6qfVPDXZ7Pt"; // Cassidy voice (good for storytelling)
     this.defaultModelId = "eleven_flash_v2_5"; // Fast, low-latency model for narration
-    this.agentId = "agent_01jxvakybhfmnr3yqvwxwye3sj"; // Your StoryWriter Agent
   }
 
   // --- Utility Methods ---
@@ -217,12 +215,12 @@ export class ElevenLabsService {
     }
 
     this.connectionState = ConnectionState.CONNECTING;
-    serviceLogger.elevenlabs.call('Starting conversation with StoryWriter Agent', { agentId: this.agentId });
+    serviceLogger.elevenlabs.call('Starting conversation with StoryWriter Agent');
 
     try {
       const response = await client.post<{
         signed_url: string
-      }>('/conversation/sdk-credentials', { agentId: this.agentId });
+      }>('/conversation/sdk-credentials');
 
       if (!response.data?.signed_url) {
         throw new Error('Missing signed_url in credentials response');
@@ -230,7 +228,7 @@ export class ElevenLabsService {
 
       const { signed_url } = response.data;
 
-      serviceLogger.elevenlabs.call('Got signed URL for conversation', { agentId: this.agentId });
+      serviceLogger.elevenlabs.call('Got signed URL for conversation');
 
       // Start conversation using ElevenLabs SDK with signed URL
       const conversation = await Conversation.startSession({

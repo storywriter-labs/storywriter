@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import Layout from '../../components/Layout/Layout';
 import { useConversationStore, ConversationPhase } from '@/src/stores/conversationStore';
+import { useStoryStore } from '@/src/stores/storyStore';
 import StoryContent from '@/components/StoryContent/StoryContent';
 import ConversationInterface, { ConversationInterfaceRef } from '@/components/ConversationInterface/ConversationInterface';
 import StoryGenerationSplash from '@/components/StoryGenerationSplash/StoryGenerationSplash';
@@ -14,11 +15,9 @@ import { s } from './StoryScreen.style';
 
 const StoryScreen = () => {
   const isFocused = useIsFocused();
-  const {
-    story,
-    phase,
-    isGenerating
-  } = useConversationStore();
+  const story = useStoryStore(s => s.story);
+  const phase = useConversationStore(s => s.phase);
+  const isGenerating = useStoryStore(s => s.isGenerating);
 
   const conversationRef = useRef<ConversationInterfaceRef>(null);
   const currentPhase: ConversationPhase = phase;

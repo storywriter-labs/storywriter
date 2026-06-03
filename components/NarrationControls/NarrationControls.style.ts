@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+import { Colors } from '@/constants/theme';
 
 export const styles = StyleSheet.create({
     container: {
@@ -10,7 +11,7 @@ export const styles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 30,
-        backgroundColor: '#D35400',
+        backgroundColor: Colors.accent,
         alignItems: 'center',
         justifyContent: 'center',
         shadowColor: "#000",
@@ -19,27 +20,23 @@ export const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 4,
     },
-    playPauseIcon: {
-        fontSize: 28,
-        color: 'white',
-    },
     errorContainer: {
-        backgroundColor: '#ffebee',
+        backgroundColor: Colors.errorLight,
         padding: 12,
         borderRadius: 8,
         borderLeftWidth: 4,
-        borderLeftColor: '#d32f2f',
+        borderLeftColor: Colors.error,
         gap: 10,
         maxWidth: 200,
     },
     errorText: {
         fontSize: 13,
-        color: '#d32f2f',
+        color: Colors.error,
         textAlign: 'center',
         lineHeight: 18,
     },
     retryButton: {
-        backgroundColor: '#D35400',
+        backgroundColor: Colors.accent,
         paddingVertical: 10,
         paddingHorizontal: 20,
         borderRadius: 8,
@@ -56,7 +53,13 @@ export const styles = StyleSheet.create({
     },
     retryButtonText: {
         fontSize: 14,
-        color: 'white',
+        color: Colors.white,
         fontWeight: '600',
+    },
+    retryButtonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
     },
 });

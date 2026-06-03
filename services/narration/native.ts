@@ -172,6 +172,42 @@ export class NativeNarrationPlayer implements NarrationPlayer {
 
     return btoa(binary);
   }
+
+  /**
+   * Play audio data immediately without caching
+   */
+  async playOnce(audioData: Uint8Array): Promise<void> {
+    try {
+      const base64 = this.uint8ArrayToBase64(audioData);
+      const dataUri = `data:audio/mpeg;base64,${base64}`;
+
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: dataUri },
+        { shouldPlay: true }
+      );
+
+      // Clean up sound after playback completes
+      sound.setOnPlaybackStatusUpdate((status: any) => {
+        if (!status.isLoaded) {
+          return;
+        }
+
+        if (status.didJustFinish && !status.isLooping) {
+          sound.unloadAsync().catch(() => {
+            // Ignore cleanup errors
+          });
+        }
+
+        if (status.error) {
+          console.error('Audio playback error:', status.error);
+        }
+      });
+    } catch (error) {
+      throw new Error(
+        `Failed to play audio: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
 }
 
 /**

@@ -43,16 +43,19 @@ jest.mock('expo-font', () => ({
   isLoaded: jest.fn(() => true),
 }));
 
-// Mock zustand store
-jest.mock('@/src/stores/conversationStore', () => ({
-  useConversationStore: () => ({
-    messages: [],
-    addMessage: jest.fn(),
-    isRecording: false,
-    getError: jest.fn(() => null),
-    retryStoryGeneration: jest.fn(),
-  }),
+// Mock narration service
+jest.mock('@/services/narration', () => ({
+  createNarrationPlayer: jest.fn(() => ({
+    playOnce: jest.fn(() => Promise.resolve()),
+    load: jest.fn(() => Promise.resolve()),
+    play: jest.fn(() => Promise.resolve()),
+    stop: jest.fn(() => Promise.resolve()),
+    unload: jest.fn(() => Promise.resolve()),
+  })),
 }));
+
+// Mock zustand store - note: some tests override this with jest.mockImplementation
+jest.mock('@/src/stores/conversationStore');
 
 // Silence console warnings in tests
 const originalConsole = global.console;

@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useConversationStore } from '@/src/stores/conversationStore';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '@/constants/theme';
+import { useNarrationStore } from '@/src/stores/narrationStore';
 import { styles } from './NarrationControls.style';
 
 interface NarrationControlsProps {
@@ -15,11 +17,9 @@ interface NarrationControlsProps {
 }
 
 export function NarrationControls({ onPlay, onPause, errorMessage, onRetry }: NarrationControlsProps) {
-    const {
-        isNarrationPlaying,
-        isLoadingAudio,
-        isRateLimited
-    } = useConversationStore();
+    const isNarrationPlaying = useNarrationStore(s => s.isNarrationPlaying);
+    const isLoadingAudio = useNarrationStore(s => s.isLoadingAudio);
+    const isRateLimited = useNarrationStore(s => s.isRateLimited);
 
     return (
         <View style={styles.container}>
@@ -35,7 +35,10 @@ export function NarrationControls({ onPlay, onPause, errorMessage, onRetry }: Na
                             accessibilityLabel="Retry loading audio"
                             accessibilityRole="button"
                         >
-                            <Text style={styles.retryButtonText}>🔄 Retry</Text>
+                            <View style={styles.retryButtonContent}>
+                                <Ionicons name="refresh" size={16} color={Colors.white} />
+                                <Text style={styles.retryButtonText}>Retry</Text>
+                            </View>
                         </TouchableOpacity>
                     )}
                 </View>
@@ -53,9 +56,11 @@ export function NarrationControls({ onPlay, onPause, errorMessage, onRetry }: Na
                     accessibilityLabel={isNarrationPlaying ? "Pause narration" : "Play narration"}
                     accessibilityRole="button"
                 >
-                    <Text style={styles.playPauseIcon}>
-                        {isNarrationPlaying ? '⏸' : '▶️'}
-                    </Text>
+                    <Ionicons
+                        name={isNarrationPlaying ? 'pause' : 'play'}
+                        size={28}
+                        color={Colors.white}
+                    />
                 </TouchableOpacity>
             )}
         </View>

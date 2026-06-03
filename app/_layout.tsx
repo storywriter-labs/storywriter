@@ -6,7 +6,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import Constants from 'expo-constants';
 import { useEffect, useMemo, useRef } from 'react';
-import { Platform, View, ActivityIndicator, StyleSheet } from 'react-native';
+import { Platform, View, ActivityIndicator, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import 'react-native-reanimated';
 import PostHog, { PostHogProvider, usePostHog } from 'posthog-react-native';
 
@@ -16,6 +16,7 @@ import { setPostHogClient, trackEvent, AnalyticsEvents } from '../src/utils/anal
 
 const posthogApiKey = Constants.expoConfig?.extra?.POSTHOG_API_KEY ?? '';
 const posthogHost = Constants.expoConfig?.extra?.POSTHOG_HOST ?? 'https://us.i.posthog.com';
+const appEnv = Constants.expoConfig?.extra?.environment ?? 'development';
 
 export {
   ErrorBoundary,
@@ -65,7 +66,7 @@ export default function RootLayout() {
  */
 function PostHogProviderWrapper({ children }: { children: React.ReactNode }) {
   const client = useMemo(() => {
-    if (typeof window === 'undefined' || !posthogApiKey) {
+    if (typeof window === 'undefined' || !posthogApiKey || appEnv !== 'production') {
       return null;
     }
 
@@ -100,7 +101,7 @@ function PostHogClientRegistrar() {
 }
 
 function RootLayoutNav() {
-  const { isAuthenticated, loading, user } = useAuth();
+  const { isAuthenticated, loading, user, loadingError, retryLoadUser } = useAuth();
   const hasFiredAppOpened = useRef(false);
 
   // Custom theme with transparent backgrounds
@@ -157,6 +158,27 @@ function RootLayoutNav() {
     );
   }
 
+  if (loadingError === 'network') {
+    return (
+      <View style={styles.loadingContainer}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorTitle}>Can't reach StoryWriter</Text>
+          <Text style={styles.errorMessage}>
+            Please check your internet connection and try again.
+          </Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={async () => {
+              await retryLoadUser();
+            }}
+          >
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <ThemeProvider value={customTheme}>
       {/* 4. CLEANER STACK
@@ -177,5 +199,33 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  errorContainer: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#333',
+  },
+  errorMessage: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: '#4ECDC4',
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

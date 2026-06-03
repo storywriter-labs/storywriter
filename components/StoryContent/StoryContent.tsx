@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, View, ActivityIndicator, StyleSheet } from 'react-native';
-import { useConversationStore } from '@/src/stores/conversationStore';
+import { useStoryStore } from '@/src/stores/storyStore';
 import BookReader from '@/components/BookReader/BookReader';
 
 /**
@@ -16,7 +16,8 @@ import BookReader from '@/components/BookReader/BookReader';
  * @returns Book-like interface for story display.
  */
 const StoryContent: React.FC = () => {
-  const { isGenerating, story } = useConversationStore();
+  const isGenerating = useStoryStore(s => s.isGenerating);
+  const story = useStoryStore(s => s.story);
   const sections = story.sections;
 
   // 1. LOADING STATE

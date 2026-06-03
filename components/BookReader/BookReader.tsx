@@ -9,8 +9,12 @@ import {
     PanResponder,
     Animated
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '@/constants/theme';
 import { styles } from './BookReader.style';
 import { useConversationStore } from '@/src/stores/conversationStore';
+import { useStoryStore } from '@/src/stores/storyStore';
+import { useNarrationStore } from '@/src/stores/narrationStore';
 import { StorySection } from '@/types/story';
 import { createNarrationPlayer } from '@/services/narration';
 import type { NarrationPlayer } from '@/services/narration';
@@ -61,19 +65,19 @@ const ShimmerPlaceholder = () => {
 };
 
 const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = {}) => {
-    const {
-        story,
-        resetConversation,
-        isNarrationEnabled,
-        isNarrationPlaying,
-        isLoadingAudio,
-        autoAdvancePages,
-        isRateLimited,
-        setNarrationPlaying,
-        setLoadingAudio,
-        setRateLimited,
-        updatePageImage
-    } = useConversationStore();
+    const story = useStoryStore(s => s.story);
+    const updatePageImage = useStoryStore(s => s.updatePageImage);
+    const resetConversation = useConversationStore(s => s.resetConversation);
+    const resetStory = useStoryStore(s => s.resetStory);
+    const resetNarration = useNarrationStore(s => s.resetNarration);
+    const isNarrationEnabled = useNarrationStore(s => s.isNarrationEnabled);
+    const isNarrationPlaying = useNarrationStore(s => s.isNarrationPlaying);
+    const isLoadingAudio = useNarrationStore(s => s.isLoadingAudio);
+    const autoAdvancePages = useNarrationStore(s => s.autoAdvancePages);
+    const isRateLimited = useNarrationStore(s => s.isRateLimited);
+    const setNarrationPlaying = useNarrationStore(s => s.setNarrationPlaying);
+    const setLoadingAudio = useNarrationStore(s => s.setLoadingAudio);
+    const setRateLimited = useNarrationStore(s => s.setRateLimited);
 
     const pages = useMemo(() =>
         (sectionsProp && sectionsProp.length > 0)
@@ -373,8 +377,10 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
 
     const handleNewStory = () => {
         trackEvent(AnalyticsEvents.STORY_END_ACTION, { action: 'new_story' });
-        // Reset the entire conversation store to start fresh
+        // Reset all stores to start fresh
         resetConversation();
+        resetStory();
+        resetNarration();
         // This will trigger the app to go back to the voice assistant/story input
     };
 
@@ -385,14 +391,29 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
         if (Platform.OS !== 'web') {
             // Option 1: Reset to beginning
             resetConversation();
+            resetStory();
+            resetNarration();
 
             // Option 2: Or if you have BackHandler for Android
             // BackHandler.exitApp();
         } else {
             // On web, just reset to beginning
             resetConversation();
+            resetStory();
+            resetNarration();
         }
     };
+
+    const handleClose = useCallback(() => {
+        trackEvent(AnalyticsEvents.STORY_END_ACTION, { action: 'close' });
+        if (onBack) {
+            onBack();
+        } else {
+            resetConversation();
+            resetStory();
+            resetNarration();
+        }
+    }, [onBack, resetConversation, resetStory, resetNarration]);
 
     // Generate audio and lazy-load images on page change & track page views
     useEffect(() => {
@@ -513,7 +534,7 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
             <View style={styles.pageWrapper}>
                 {isEndPage ? (
                     <View style={styles.endPageContainer}>
-                        <Text style={styles.endTitle}>The End! 🎉</Text>
+                        <Text style={styles.endTitle}>The End!</Text>
                         <Text style={styles.endSubtitle}>What would you like to do?</Text>
 
                         {onBack ? (
@@ -522,7 +543,10 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
                                     style={[styles.endButton, styles.primaryButton]}
                                     onPress={handleRestartStory}
                                 >
-                                    <Text style={styles.primaryButtonText}>🔄 Read Again</Text>
+                                    <View style={styles.endButtonContent}>
+                                        <Ionicons name="refresh" size={20} color="white" />
+                                        <Text style={styles.primaryButtonText}>Read Again</Text>
+                                    </View>
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
@@ -532,7 +556,10 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
                                         onBack?.();
                                     }}
                                 >
-                                    <Text style={styles.secondaryButtonText}>📚 Back to Bookshelf</Text>
+                                    <View style={styles.endButtonContent}>
+                                        <Ionicons name="library" size={20} color={Colors.accent} />
+                                        <Text style={styles.secondaryButtonText}>Back to Bookshelf</Text>
+                                    </View>
                                 </TouchableOpacity>
                             </>
                         ) : (
@@ -541,21 +568,30 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
                                     style={[styles.endButton, styles.primaryButton]}
                                     onPress={handleNewStory}
                                 >
-                                    <Text style={styles.primaryButtonText}>✨ Create New Story</Text>
+                                    <View style={styles.endButtonContent}>
+                                        <Ionicons name="sparkles" size={20} color="white" />
+                                        <Text style={styles.primaryButtonText}>Create New Story</Text>
+                                    </View>
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
                                     style={[styles.endButton, styles.secondaryButton]}
                                     onPress={handleRestartStory}
                                 >
-                                    <Text style={styles.secondaryButtonText}>🔄 Read Again</Text>
+                                    <View style={styles.endButtonContent}>
+                                        <Ionicons name="refresh" size={20} color={Colors.accent} />
+                                        <Text style={styles.secondaryButtonText}>Read Again</Text>
+                                    </View>
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
                                     style={[styles.endButton, styles.tertiaryButton]}
                                     onPress={handleExit}
                                 >
-                                    <Text style={styles.tertiaryButtonText}>🏠 Exit</Text>
+                                    <View style={styles.endButtonContent}>
+                                        <Ionicons name="home" size={18} color={Colors.darkGray} />
+                                        <Text style={styles.tertiaryButtonText}>Exit</Text>
+                                    </View>
                                 </TouchableOpacity>
                             </>
                         )}
@@ -642,6 +678,16 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
                     <Text style={styles.backToBookshelfBtnText}>‹ Bookshelf</Text>
                 </TouchableOpacity>
             )}
+
+            {/* CLOSE BUTTON */}
+            <TouchableOpacity
+                style={styles.closeButton}
+                onPress={handleClose}
+                accessibilityLabel="Close story"
+                accessibilityRole="button"
+            >
+                <Ionicons name="close" size={24} color="#666666" />
+            </TouchableOpacity>
         </View>
     );
 };

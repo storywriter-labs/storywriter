@@ -1,19 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useConversationStore } from '@/src/stores/conversationStore';
+import { useStoryStore } from '@/src/stores/storyStore';
+import { useErrorStore } from '@/src/stores/errorStore';
 import { trackEvent, AnalyticsEvents } from '@/src/utils/analytics';
+import { Colors, FontSizes, Spacing, BorderRadius } from '@/constants/theme';
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 // --- CONFIGURATION ---
-const LOADING_MESSAGES = [
-  { text: "Creating your story...", emoji: "✨", duration: 3000 },
-  { text: "Adding magical illustrations...", emoji: "🎨", duration: 3500 },
-  { text: "Almost ready!", emoji: "🌟", duration: 2000 }
+const LOADING_MESSAGES: { text: string; icon: IoniconName; duration: number }[] = [
+  { text: "Creating your story...", icon: "sparkles", duration: 3000 },
+  { text: "Adding magical illustrations...", icon: "color-palette", duration: 3500 },
+  { text: "Almost ready!", icon: "star", duration: 2000 }
 ];
 
 const ERROR_MESSAGES = [
-  "Oops! Our story machine needs a quick break. Let's try again! 🔧",
-  "The story elves are working extra hard! Please wait a moment... 🧝‍♀️",
-  "Sometimes even the best storytellers need a moment to think! 📚"
+  "Oops! Our story machine needs a quick break. Let's try again!",
+  "The story elves are working extra hard! Please wait a moment...",
+  "Sometimes even the best storytellers need a moment to think!"
 ];
 
 // --- SUB-COMPONENT: ERROR VIEW ---
@@ -22,10 +28,10 @@ const ErrorView = ({ onRetry }: { onRetry: () => void }) => {
 
   return (
     <View style={styles.card}>
-      <Text style={styles.emojiLarge}>😊</Text>
+      <Ionicons name="happy-outline" size={FontSizes.enormous} color={Colors.coral} style={styles.iconLarge} />
       <Text style={styles.messageText}>{randomMsg}</Text>
       <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
-        <Text style={styles.retryText}>Try Again! 🚀</Text>
+        <Text style={styles.retryText}>Try Again!</Text>
       </TouchableOpacity>
     </View>
   );
@@ -59,9 +65,9 @@ const LoadingView = () => {
 
   return (
     <View style={styles.card}>
-      {/* Bouncing Character */}
-      <Animated.View style={{ transform: [{ translateY: bounceAnim }] }}>
-        <Text style={styles.emojiLarge}>{current.emoji}</Text>
+      {/* Bouncing Icon */}
+      <Animated.View style={[styles.iconLarge, { transform: [{ translateY: bounceAnim }] }]}>
+        <Ionicons name={current.icon} size={FontSizes.enormous} color={Colors.coral} />
       </Animated.View>
 
       {/* Message */}
@@ -74,7 +80,7 @@ const LoadingView = () => {
         ))}
       </View>
 
-      <Text style={styles.subText}>Your amazing story is coming to life! 🌈</Text>
+      <Text style={styles.subText}>Your amazing story is coming to life!</Text>
     </View>
   );
 };
@@ -85,7 +91,9 @@ interface Props {
 }
 
 const StoryGenerationSplash: React.FC<Props> = ({ isVisible }) => {
-  const { getError, retryStoryGeneration } = useConversationStore();
+  const getError = useErrorStore(s => s.getError);
+  const finalTranscript = useConversationStore(s => s.finalTranscript);
+  const retryStoryGeneration = useStoryStore(s => s.retryStoryGeneration);
   const retryCountRef = useRef(0);
 
   // Check if we have a specific generation error
@@ -96,7 +104,7 @@ const StoryGenerationSplash: React.FC<Props> = ({ isVisible }) => {
     trackEvent(AnalyticsEvents.STORY_GENERATION_RETRIED, {
       retry_count: retryCountRef.current,
     });
-    void retryStoryGeneration();
+    void retryStoryGeneration(finalTranscript);
   };
 
   if (!isVisible) return null;
@@ -120,68 +128,67 @@ const styles = StyleSheet.create({
     zIndex: 999,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: Spacing.lg,
   },
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.96)',
-    borderRadius: 32,
-    padding: 40,
+    backgroundColor: Colors.background,
+    borderRadius: BorderRadius.large,
+    padding: Spacing.xxxl,
     maxWidth: 600,
     width: '100%',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: Colors.black,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.2,
     shadowRadius: 24,
     elevation: 12,
     borderWidth: 4,
-    borderColor: '#FFD93D',
+    borderColor: Colors.yellow,
   },
-  emojiLarge: {
-    fontSize: 80,
-    marginBottom: 20,
+  iconLarge: {
+    marginBottom: Spacing.lg,
   },
   messageText: {
-    fontSize: 24,
+    fontSize: FontSizes.xxxl,
     fontWeight: '600',
-    color: '#FF6B6B',
+    color: Colors.coral,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: Spacing.lg,
     minHeight: 60, // Prevents layout jump when text changes
   },
   subText: {
-    fontSize: 18,
-    color: '#4ECDC4',
-    marginTop: 20,
+    fontSize: FontSizes.lg,
+    color: Colors.teal,
+    marginTop: Spacing.lg,
     fontWeight: '600',
   },
   dotContainer: {
     flexDirection: 'row',
-    gap: 12,
+    gap: Spacing.sm,
   },
   dot: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#E5E5E5',
+    backgroundColor: Colors.lightGray,
   },
   dotActive: {
-    backgroundColor: '#4ECDC4',
+    backgroundColor: Colors.teal,
     transform: [{ scale: 1.3 }],
   },
   retryButton: {
-    backgroundColor: '#4ECDC4',
+    backgroundColor: Colors.teal,
     paddingHorizontal: 30,
     paddingVertical: 15,
-    borderRadius: 16,
-    marginTop: 20,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.lg,
     elevation: 5,
     borderWidth: 2,
-    borderColor: '#45B8B0',
+    borderColor: Colors.tealDark,
   },
   retryText: {
-    color: 'white',
-    fontSize: 18,
+    color: Colors.white,
+    fontSize: FontSizes.lg,
     fontWeight: 'bold',
   }
 });

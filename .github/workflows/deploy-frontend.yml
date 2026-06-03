@@ -315,7 +315,7 @@ jobs:
           echo "Testing connectivity to $API_URL"
 
           # Test health endpoint with timeout
-          if curl -f -m 10 "$API_URL/api/health"; then
+          if curl -f -m 10 "$API_URL/api/v1/health"; then
             echo "✅ Backend connectivity test passed"
           else
             echo "⚠️ Backend connectivity test failed - continuing with deployment"
@@ -433,7 +433,7 @@ jobs:
           echo "Testing API connectivity from deployed frontend"
           # This would typically involve running browser tests
           # For now, we'll just test the API endpoint directly
-          if curl -f -m 10 "$API_URL/api/health"; then
+          if curl -f -m 10 "$API_URL/api/v1/health"; then
             echo "✅ Backend API is accessible from deployment environment"
           else
             echo "⚠️ Backend API test failed - may need manual verification"

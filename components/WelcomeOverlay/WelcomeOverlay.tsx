@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'; // Removed Animated temporarily to pass linting
+import { Colors, Spacing, BorderRadius, FontSizes } from '@/constants/theme';
 
 interface WelcomeOverlayProps {
   onStart: () => void;
@@ -33,17 +34,17 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'flex-start',
     alignItems: 'center',
-    padding: 20,
+    padding: Spacing.lg,
     paddingTop: 175,
   },
   startButton: {
-    backgroundColor: '#FF6B6B',
+    backgroundColor: Colors.coral,
     paddingVertical: 24,
     paddingHorizontal: 56,
-    borderRadius: 32,
+    borderRadius: BorderRadius.large,
     borderWidth: 5,
-    borderColor: '#2D2D2D',
-    shadowColor: '#000',
+    borderColor: Colors.darkestGray,
+    shadowColor: Colors.black,
     shadowOffset: { width: 6, height: 6 },
     shadowOpacity: 1,
     shadowRadius: 0,
@@ -52,11 +53,11 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#FFFEF7',
-    fontSize: 32,
+    fontSize: FontSizes.enormous,
     fontWeight: '900',
     textAlign: 'center',
     letterSpacing: 1,
-    textShadowColor: '#2D2D2D',
+    textShadowColor: Colors.darkestGray,
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 0,
   },

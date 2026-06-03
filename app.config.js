@@ -33,7 +33,7 @@ export default ({ config }) => ({
     name: IS_PRODUCTION ? 'StoryWriter' : IS_STAGING ? 'StoryWriter (Staging)' : 'StoryWriter (Dev)',
     slug: "storywriter",
     version: "0.5.0",
-    sdkVersion: "52.0.0",
+    sdkVersion: "55.0.0",
     orientation: "landscape",
     icon: "./assets/images/icon.png",
     scheme: "storywriter",

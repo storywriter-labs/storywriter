@@ -171,6 +171,30 @@ export class WebNarrationPlayer implements NarrationPlayer {
   private handleAudioPause = (): void => {
     this.playing = false;
   };
+
+  /**
+   * Play audio data immediately without caching
+   */
+  async playOnce(audioData: Uint8Array): Promise<void> {
+    try {
+      const blob = new Blob([audioData], { type: 'audio/mpeg' });
+      const blobUrl = URL.createObjectURL(blob);
+
+      const audio = new Audio(blobUrl);
+      audio.onended = () => {
+        URL.revokeObjectURL(blobUrl);
+      };
+      audio.onerror = () => {
+        URL.revokeObjectURL(blobUrl);
+      };
+
+      await audio.play();
+    } catch (error) {
+      throw new Error(
+        `Failed to play audio: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
 }
 
 /**

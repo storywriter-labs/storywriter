@@ -178,7 +178,7 @@ export class ErrorHandler {
       case ErrorType.CONVERSATION:
         return 'Could not connect to the StoryWriter Agent. Please try again.';
       case ErrorType.STORY_GENERATION:
-        return 'Having trouble creating your story. Let\'s try again! ✨';
+        return 'Having trouble creating your story. Let\'s try again!';
       case ErrorType.AUDIO:
         return 'Audio generation is temporarily unavailable. Story creation will continue.';
       case ErrorType.STORAGE:
@@ -202,22 +202,22 @@ export const ChildFriendlyErrors: {
   getRandomMessage(category: 'storyGeneration' | 'conversation' | 'audio'): string;
 } = {
   storyGeneration: [
-    "Our story elves are working extra hard! Let's try again... 🧝‍♀️",
-    "The story magic needs a moment to recharge! ✨",
-    "Our story machine is being extra careful with your tale! 🔧",
-    "Sometimes the best stories need a second try! 📚",
-    "The story creators are making sure everything is perfect! 🎨"
+    "Our story elves are working extra hard! Let's try again...",
+    "The story magic needs a moment to recharge!",
+    "Our story machine is being extra careful with your tale!",
+    "Sometimes the best stories need a second try!",
+    "The story creators are making sure everything is perfect!"
   ],
-  
+
   conversation: [
-    "The StoryWriter Agent is taking a quick break! Let's try connecting again. 🤖",
-    "Our story friend needs a moment to wake up! Try again in a second. 😊",
-    "The connection sprites are being silly! Let's try once more. 🧚‍♀️"
+    "The StoryWriter Agent is taking a quick break! Let's try connecting again.",
+    "Our story friend needs a moment to wake up! Try again in a second.",
+    "The connection sprites are being silly! Let's try once more."
   ],
-  
+
   audio: [
-    "The voice magic is resting right now, but your story is still amazing! 🎭",
-    "Our story narrator is taking a quick break, but we can still read together! 📖"
+    "The voice magic is resting right now, but your story is still amazing!",
+    "Our story narrator is taking a quick break, but we can still read together!"
   ],
 
   getRandomMessage(category: 'storyGeneration' | 'conversation' | 'audio'): string {
