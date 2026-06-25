@@ -78,7 +78,8 @@ export default ({ config }) => ({
     },
     plugins: [
       "expo-dev-client",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-audio"
     ],
     extra: {
       // Backend Integration

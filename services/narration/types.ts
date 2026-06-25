@@ -2,7 +2,7 @@
  * Narration Player Types
  *
  * Platform-agnostic interface for audio playback in the StoryWriter narration system.
- * Implementations exist for web (HTML5 Audio) and native (expo-av).
+ * Implementations exist for web (HTML5 Audio) and native (expo-audio).
  */
 
 /**
@@ -25,7 +25,7 @@ export interface NarrationPlayerConfig {
  *
  * Implementations:
  * - Web: services/narration/web.ts (HTML5 Audio)
- * - Native: services/narration/native.ts (expo-av)
+ * - Native: services/narration/native.ts (expo-audio)
  */
 export interface NarrationPlayer {
   /**

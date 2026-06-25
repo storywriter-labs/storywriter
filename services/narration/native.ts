@@ -1,22 +1,30 @@
 /**
  * Native Implementation of Narration Player
  *
- * Uses expo-av Audio API for iOS and Android audio playback.
- * Loads Uint8Array audio data directly into Sound object.
+ * Uses the expo-audio Audio API for iOS and Android audio playback.
+ * Loads Uint8Array audio data directly into an AudioPlayer via a base64 data URI.
  */
 
-import { Audio } from 'expo-av';
+import {
+  createAudioPlayer,
+  setAudioModeAsync,
+  type AudioPlayer,
+  type AudioStatus,
+} from 'expo-audio';
 import type {
   NarrationPlayer,
   NarrationPlayerConfig,
   PlaybackCompletionCallback,
 } from './types';
 
+type StatusSubscription = { remove: () => void };
+
 /**
- * expo-av based narration player for native platforms (iOS/Android)
+ * expo-audio based narration player for native platforms (iOS/Android)
  */
 export class NativeNarrationPlayer implements NarrationPlayer {
-  private sound: Audio.Sound | null = null;
+  private player: AudioPlayer | null = null;
+  private statusSubscription: StatusSubscription | null = null;
   private completionCallback: PlaybackCompletionCallback | null = null;
   private playing = false;
 
@@ -27,34 +35,33 @@ export class NativeNarrationPlayer implements NarrationPlayer {
   }
 
   /**
-   * Load audio data using expo-av Sound
+   * Load audio data using an expo-audio AudioPlayer
    */
   async load(audioData: Uint8Array): Promise<void> {
     try {
       // Clean up previous audio resources
-      await this.cleanup();
+      this.cleanup();
 
       // Configure audio session for playback
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
-        shouldDuckAndroid: true,
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        shouldPlayInBackground: false,
       });
 
       // Convert Uint8Array to base64 data URI
       const base64 = this.uint8ArrayToBase64(audioData);
       const dataUri = `data:audio/mpeg;base64,${base64}`;
 
-      // Create and load sound
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: dataUri },
-        { shouldPlay: false },
+      // Create the player (paused until play() is called)
+      const player = createAudioPlayer({ uri: dataUri });
+      this.statusSubscription = player.addListener(
+        'playbackStatusUpdate',
         this.handlePlaybackStatusUpdate
       );
 
-      this.sound = sound;
+      this.player = player;
     } catch (error) {
-      await this.cleanup();
+      this.cleanup();
       throw new Error(
         `Failed to load audio: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
@@ -65,12 +72,12 @@ export class NativeNarrationPlayer implements NarrationPlayer {
    * Start or resume playback
    */
   async play(): Promise<void> {
-    if (!this.sound) {
+    if (!this.player) {
       throw new Error('No audio loaded. Call load() first.');
     }
 
     try {
-      await this.sound.playAsync();
+      this.player.play();
       this.playing = true;
     } catch (error) {
       throw new Error(
@@ -83,12 +90,12 @@ export class NativeNarrationPlayer implements NarrationPlayer {
    * Pause playback
    */
   async pause(): Promise<void> {
-    if (!this.sound) {
+    if (!this.player) {
       throw new Error('No audio loaded. Call load() first.');
     }
 
     try {
-      await this.sound.pauseAsync();
+      this.player.pause();
       this.playing = false;
     } catch (error) {
       throw new Error(
@@ -115,25 +122,29 @@ export class NativeNarrationPlayer implements NarrationPlayer {
    * Clean up all resources
    */
   cleanup(): void {
-    if (this.sound) {
-      // Cleanup asynchronously but don't wait
-      this.sound
-        .stopAsync()
-        .then(() => this.sound?.unloadAsync())
-        .catch((error) => {
-          // Ignore cleanup errors
-          console.error('Error during sound cleanup:', error);
-        });
-      this.sound = null;
+    if (this.statusSubscription) {
+      this.statusSubscription.remove();
+      this.statusSubscription = null;
+    }
+
+    if (this.player) {
+      try {
+        // Free the underlying native player resources
+        this.player.remove();
+      } catch (error) {
+        // Ignore cleanup errors
+        console.error('Error during sound cleanup:', error);
+      }
+      this.player = null;
     }
 
     this.playing = false;
   }
 
   /**
-   * Handle playback status updates from expo-av
+   * Handle playback status updates from expo-audio
    */
-  private handlePlaybackStatusUpdate = (status: any): void => {
+  private handlePlaybackStatusUpdate = (status: AudioStatus): void => {
     if (!status.isLoaded) {
       // Audio is not loaded or has been unloaded
       this.playing = false;
@@ -141,21 +152,15 @@ export class NativeNarrationPlayer implements NarrationPlayer {
     }
 
     // Update playing state based on actual playback status
-    this.playing = status.isPlaying;
+    this.playing = status.playing;
 
     // Check if playback has finished
-    if (status.didJustFinish && !status.isLooping) {
+    if (status.didJustFinish && !status.loop) {
       this.playing = false;
 
       if (this.completionCallback) {
         this.completionCallback();
       }
-    }
-
-    // Handle errors
-    if (status.error) {
-      this.playing = false;
-      console.error('Audio playback error:', status.error);
     }
   };
 
@@ -181,27 +186,28 @@ export class NativeNarrationPlayer implements NarrationPlayer {
       const base64 = this.uint8ArrayToBase64(audioData);
       const dataUri = `data:audio/mpeg;base64,${base64}`;
 
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: dataUri },
-        { shouldPlay: true }
+      const player = createAudioPlayer({ uri: dataUri });
+
+      // Clean up the player after playback completes
+      const subscription = player.addListener(
+        'playbackStatusUpdate',
+        (status: AudioStatus) => {
+          if (!status.isLoaded) {
+            return;
+          }
+
+          if (status.didJustFinish && !status.loop) {
+            subscription.remove();
+            try {
+              player.remove();
+            } catch {
+              // Ignore cleanup errors
+            }
+          }
+        }
       );
 
-      // Clean up sound after playback completes
-      sound.setOnPlaybackStatusUpdate((status: any) => {
-        if (!status.isLoaded) {
-          return;
-        }
-
-        if (status.didJustFinish && !status.isLooping) {
-          sound.unloadAsync().catch(() => {
-            // Ignore cleanup errors
-          });
-        }
-
-        if (status.error) {
-          console.error('Audio playback error:', status.error);
-        }
-      });
+      player.play();
     } catch (error) {
       throw new Error(
         `Failed to play audio: ${error instanceof Error ? error.message : 'Unknown error'}`
