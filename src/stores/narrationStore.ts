@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
+import { devtools, persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ---------------------------------------------------------------------------
 // USAGE: Always use per-field selectors, NOT wholesale destructuring
@@ -31,12 +32,22 @@ export interface NarrationState {
   isRateLimited: boolean;
   rateLimitResetTime: number | null;
 
+  // --- Preferences (persisted) ---
+  /**
+   * Whether narration should auto-play when a story page is displayed.
+   * Toggled by the Play (on) / Pause (off) controls and remembered across
+   * stories and app launches. When false, no TTS is generated on page change
+   * until the user presses Play again.
+   */
+  isAutoPlayEnabled: boolean;
+
   // --- Actions: Narration ---
   setNarrationEnabled: (enabled: boolean) => void;
   setNarrationPlaying: (playing: boolean) => void;
   setLoadingAudio: (loading: boolean) => void;
   setAutoAdvancePages: (auto: boolean) => void;
   setRateLimited: (limited: boolean, resetTime?: number) => void;
+  setAutoPlayEnabled: (enabled: boolean) => void;
 
   // --- Actions: Reset ---
   resetNarration: () => void;
@@ -48,51 +59,66 @@ export interface NarrationState {
 
 const useNarrationStore = create<NarrationState>()(
   devtools(
-    (set, get) => ({
+    persist(
+      (set, get) => ({
 
-      // --- Initial state ---
-      isNarrationEnabled: true,
-      isNarrationPlaying: false,
-      isLoadingAudio: false,
-      autoAdvancePages: false,
-      isRateLimited: false,
-      rateLimitResetTime: null,
+        // --- Initial state ---
+        isNarrationEnabled: true,
+        isNarrationPlaying: false,
+        isLoadingAudio: false,
+        autoAdvancePages: false,
+        isRateLimited: false,
+        rateLimitResetTime: null,
 
-      // -----------------------------------------------------------------------
-      // NARRATION ACTIONS
-      // -----------------------------------------------------------------------
+        // --- Preferences (persisted) ---
+        isAutoPlayEnabled: true,
 
-      setNarrationEnabled: (enabled) => set({ isNarrationEnabled: enabled }),
+        // ---------------------------------------------------------------------
+        // NARRATION ACTIONS
+        // ---------------------------------------------------------------------
 
-      setNarrationPlaying: (playing) => set({ isNarrationPlaying: playing }),
+        setNarrationEnabled: (enabled) => set({ isNarrationEnabled: enabled }),
 
-      setLoadingAudio: (loading) => set({ isLoadingAudio: loading }),
+        setNarrationPlaying: (playing) => set({ isNarrationPlaying: playing }),
 
-      setAutoAdvancePages: (auto) => set({ autoAdvancePages: auto }),
+        setLoadingAudio: (loading) => set({ isLoadingAudio: loading }),
 
-      setRateLimited: (limited, resetTime?) => {
-        set({
-          isRateLimited: limited,
-          rateLimitResetTime: resetTime ?? null,
-          isNarrationEnabled: limited ? false : get().isNarrationEnabled,
-        });
-      },
+        setAutoAdvancePages: (auto) => set({ autoAdvancePages: auto }),
 
-      // -----------------------------------------------------------------------
-      // RESET ACTIONS
-      // -----------------------------------------------------------------------
+        setRateLimited: (limited, resetTime?) => {
+          set({
+            isRateLimited: limited,
+            rateLimitResetTime: resetTime ?? null,
+            isNarrationEnabled: limited ? false : get().isNarrationEnabled,
+          });
+        },
 
-      resetNarration: () => {
-        set({
-          isNarrationEnabled: true,
-          isNarrationPlaying: false,
-          isLoadingAudio: false,
-          autoAdvancePages: false,
-          isRateLimited: false,
-          rateLimitResetTime: null,
-        });
-      },
-    })
+        setAutoPlayEnabled: (enabled) => set({ isAutoPlayEnabled: enabled }),
+
+        // ---------------------------------------------------------------------
+        // RESET ACTIONS
+        // ---------------------------------------------------------------------
+
+        resetNarration: () => {
+          // Note: isAutoPlayEnabled is intentionally NOT reset — the auto-play
+          // preference is remembered across stories and app launches.
+          set({
+            isNarrationEnabled: true,
+            isNarrationPlaying: false,
+            isLoadingAudio: false,
+            autoAdvancePages: false,
+            isRateLimited: false,
+            rateLimitResetTime: null,
+          });
+        },
+      }),
+      {
+        name: 'narration-preferences',
+        storage: createJSONStorage(() => AsyncStorage),
+        // Only persist user preferences, not transient playback state.
+        partialize: (state) => ({ isAutoPlayEnabled: state.isAutoPlayEnabled }),
+      }
+    )
   )
 );
 

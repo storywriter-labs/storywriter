@@ -78,6 +78,7 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
     const setNarrationPlaying = useNarrationStore(s => s.setNarrationPlaying);
     const setLoadingAudio = useNarrationStore(s => s.setLoadingAudio);
     const setRateLimited = useNarrationStore(s => s.setRateLimited);
+    const setAutoPlayEnabled = useNarrationStore(s => s.setAutoPlayEnabled);
 
     const pages = useMemo(() =>
         (sectionsProp && sectionsProp.length > 0)
@@ -113,9 +114,10 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
     }, [autoAdvancePages, currentIndex, pages.length, setNarrationPlaying]);
 
     // --- AUDIO GENERATION ---
-    const generateAndLoadAudio = useCallback(async (pageIndex: number, pageText: string) => {
+    // Returns true when audio is loaded into the player and ready to play.
+    const generateAndLoadAudio = useCallback(async (pageIndex: number, pageText: string): Promise<boolean> => {
         if (!isNarrationEnabled || !pageText || pageText === "Loading story..." || isRateLimited) {
-            return;
+            return false;
         }
 
         const cacheKey = `${storyIdRef.current}-${pageIndex}`;
@@ -136,7 +138,7 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
                 }
                 await playerRef.current.load(cachedAudio);
                 setLoadingAudio(false);
-                return;
+                return true;
             }
 
             // Generate new audio
@@ -174,6 +176,7 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
             }
             await playerRef.current.load(result.audio);
             setLoadingAudio(false);
+            return true;
         } catch (error) {
             console.error('Error generating audio:', error);
             trackEvent(AnalyticsEvents.NARRATION_FAILED, {
@@ -233,10 +236,12 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
             }
 
             setLoadingAudio(false);
+            return false;
         }
     }, [isNarrationEnabled, isRateLimited, setLoadingAudio, setRateLimited, handlePlaybackComplete]);
 
-    const handlePlay = useCallback(async () => {
+    // Low-level: play whatever audio is currently loaded in the player.
+    const playLoadedAudio = useCallback(async () => {
         if (!playerRef.current || isLoadingAudio) {
             return;
         }
@@ -286,7 +291,31 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
         }
     }, [isLoadingAudio, setNarrationPlaying, currentIndex]);
 
-    const handlePause = useCallback(async () => {
+    // User pressed Play: (re)enable the auto-play preference, generate audio for
+    // the current page if it wasn't pre-loaded (because auto-play was off), then
+    // play. Re-enabling the preference resumes auto-play on subsequent pages.
+    const handlePlay = useCallback(async () => {
+        setAutoPlayEnabled(true);
+        if (isLoadingAudio) {
+            return;
+        }
+        if (!playerRef.current) {
+            const currentPage = pages[currentIndex];
+            if (!currentPage?.text) {
+                return;
+            }
+            const ready = await generateAndLoadAudio(currentIndex, currentPage.text);
+            if (!ready) {
+                return;
+            }
+        }
+        await playLoadedAudio();
+    }, [isLoadingAudio, pages, currentIndex, generateAndLoadAudio, playLoadedAudio, setAutoPlayEnabled]);
+
+    // Low-level: stop playback without changing the auto-play preference.
+    // Used when navigating between pages (we still want auto-play to resume on
+    // the next page if the user hasn't opted out).
+    const stopPlayback = useCallback(async () => {
         if (!playerRef.current) {
             return;
         }
@@ -294,10 +323,6 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
         try {
             await playerRef.current.pause();
             setNarrationPlaying(false);
-            trackEvent(AnalyticsEvents.NARRATION_PAUSED, {
-                story_id: storyIdRef.current,
-                page_index: currentIndex,
-            });
         } catch (error) {
             // Log pause failure with context
             logger.error(
@@ -333,6 +358,17 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
         }
     }, [setNarrationPlaying, currentIndex]);
 
+    // User pressed Pause: opt out of auto-play (persisted) so no further TTS is
+    // generated on subsequent pages until they press Play again, then stop.
+    const handlePause = useCallback(async () => {
+        setAutoPlayEnabled(false);
+        await stopPlayback();
+        trackEvent(AnalyticsEvents.NARRATION_PAUSED, {
+            story_id: storyIdRef.current,
+            page_index: currentIndex,
+        });
+    }, [setAutoPlayEnabled, stopPlayback, currentIndex]);
+
     const handleRetry = useCallback(() => {
         trackEvent(AnalyticsEvents.NARRATION_RETRIED, { page_index: currentIndex });
         // Clear error state and retry loading audio for current page
@@ -348,26 +384,27 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
     }, [currentIndex, pages, generateAndLoadAudio]);
 
     const goNext = useCallback(() => {
-        // Pause audio when navigating
+        // Stop current audio when navigating, but keep the auto-play preference
+        // so the next page narrates automatically (if the user hasn't opted out).
         if (playerRef.current && isNarrationPlaying) {
-            void handlePause();
+            void stopPlayback();
         }
 
         if (currentIndex < pages.length) {
             setCurrentIndex(prev => prev + 1);
         }
-    }, [currentIndex, pages.length, isNarrationPlaying, handlePause]);
+    }, [currentIndex, pages.length, isNarrationPlaying, stopPlayback]);
 
     const goPrev = useCallback(() => {
-        // Pause audio when navigating
+        // Stop current audio when navigating (preference preserved — see goNext).
         if (playerRef.current && isNarrationPlaying) {
-            void handlePause();
+            void stopPlayback();
         }
 
         if (currentIndex > 0) {
             setCurrentIndex(prev => prev - 1);
         }
-    }, [currentIndex, isNarrationPlaying, handlePause]);
+    }, [currentIndex, isNarrationPlaying, stopPlayback]);
 
     const handleRestartStory = () => {
         trackEvent(AnalyticsEvents.STORY_END_ACTION, { action: 'read_again' });
@@ -430,9 +467,19 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
         // Reset image loading state on page change
         setIsLoadingImage(false);
 
+        // Auto-play: when the auto-play preference is on, generate the page's
+        // narration and start it automatically. When off (the user paused), we
+        // skip TTS entirely until they press Play again. Read the preference via
+        // getState() so toggling it doesn't re-run this effect mid-page.
         const currentPage = pages[currentIndex];
-        if (currentPage && currentPage.text) {
-            void generateAndLoadAudio(currentIndex, currentPage.text);
+        if (currentPage && currentPage.text && useNarrationStore.getState().isAutoPlayEnabled) {
+            void (async () => {
+                const ready = await generateAndLoadAudio(currentIndex, currentPage.text);
+                // Bail if the user navigated away or opted out while audio loaded.
+                if (!cancelled && ready && useNarrationStore.getState().isAutoPlayEnabled) {
+                    await playLoadedAudio();
+                }
+            })();
         }
 
         // Lazy image fetching: if page has illustrationPrompt but no imageUrl, generate on demand
@@ -462,7 +509,7 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
         return () => {
             cancelled = true;
         };
-    }, [currentIndex, pages, generateAndLoadAudio, story.storyId, updatePageImage, isEndPage]);
+    }, [currentIndex, pages, generateAndLoadAudio, playLoadedAudio, story.storyId, updatePageImage, isEndPage]);
 
     // Track story_opened once on mount
     useEffect(() => {
