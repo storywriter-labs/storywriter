@@ -35,7 +35,7 @@ export class WebNarrationPlayer implements NarrationPlayer {
       this.cleanup();
 
       // Create Blob from audio data
-      const blob = new Blob([audioData], { type: 'audio/mpeg' });
+      const blob = new Blob([audioData as BlobPart], { type: 'audio/mpeg' });
       this.currentBlobUrl = URL.createObjectURL(blob);
 
       // Create new Audio element
@@ -177,7 +177,7 @@ export class WebNarrationPlayer implements NarrationPlayer {
    */
   async playOnce(audioData: Uint8Array): Promise<void> {
     try {
-      const blob = new Blob([audioData], { type: 'audio/mpeg' });
+      const blob = new Blob([audioData as BlobPart], { type: 'audio/mpeg' });
       const blobUrl = URL.createObjectURL(blob);
 
       const audio = new Audio(blobUrl);
