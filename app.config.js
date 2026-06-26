@@ -37,7 +37,6 @@ export default ({ config }) => ({
     icon: "./assets/images/icon.png",
     scheme: "storywriter",
     userInterfaceStyle: "automatic",
-    newArchEnabled: true,
     splash: {
       image: "./assets/images/splash.png",
       resizeMode: "contain",
