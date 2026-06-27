@@ -241,8 +241,12 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
     }, [isNarrationEnabled, isRateLimited, setLoadingAudio, setRateLimited, handlePlaybackComplete]);
 
     // Low-level: play whatever audio is currently loaded in the player.
+    // Read isLoadingAudio via getState() rather than subscribing: this keeps the
+    // callback identity stable so the page-change effect (which lists this in its
+    // deps AND toggles isLoadingAudio via generateAndLoadAudio) can't feed back on
+    // itself and trigger "Maximum update depth exceeded".
     const playLoadedAudio = useCallback(async () => {
-        if (!playerRef.current || isLoadingAudio) {
+        if (!playerRef.current || useNarrationStore.getState().isLoadingAudio) {
             return;
         }
 
@@ -289,7 +293,7 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
                 playerRef.current = null;
             }
         }
-    }, [isLoadingAudio, setNarrationPlaying, currentIndex]);
+    }, [setNarrationPlaying, currentIndex]);
 
     // User pressed Play: (re)enable the auto-play preference, generate audio for
     // the current page if it wasn't pre-loaded (because auto-play was off), then
