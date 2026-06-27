@@ -21,6 +21,13 @@ import audioCache from '@/services/narration/audioCache';
 // narration player is driven a bounded number of times per page.
 // ---------------------------------------------------------------------------
 
+// Control screen focus: BookReader only narrates when its screen is focused, so
+// a second instance left mounted on an inactive tab stays silent.
+let mockIsFocused = true;
+jest.mock('@react-navigation/native', () => ({
+    useIsFocused: () => mockIsFocused,
+}));
+
 // Replace the narration player with controllable jest.fns (the global mock in
 // jest.setup.js lacks pause/cleanup, which BookReader calls).
 jest.mock('@/services/narration', () => ({
@@ -92,6 +99,7 @@ describe('BookReader – auto-play behavior (card #39)', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         audioCache.clear();
+        mockIsFocused = true;
         seedStory();
         resetNarration();
     });
@@ -157,6 +165,18 @@ describe('BookReader – auto-play behavior (card #39)', () => {
         });
 
         expect(generateSpeechMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not narrate when its screen is not focused (no duplicate audio from an off-screen reader)', async () => {
+        // Reproduces the two-tracks bug: opening a book populates the global
+        // story, which also mounts a second BookReader on the inactive Lab tab.
+        // That off-screen (unfocused) instance must stay silent.
+        mockIsFocused = false;
+        render(<BookReader onBack={jest.fn()} />);
+
+        await new Promise(resolve => setTimeout(resolve, 50));
+        expect(generateSpeechMock).not.toHaveBeenCalled();
+        expect(createNarrationPlayerMock).not.toHaveBeenCalled();
     });
 
     it('does not narrate until Play is pressed when auto-play is disabled', async () => {

@@ -10,6 +10,7 @@ import {
     Animated
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useIsFocused } from '@react-navigation/native';
 import { Colors } from '@/constants/theme';
 import { styles } from './BookReader.style';
 import { useConversationStore } from '@/src/stores/conversationStore';
@@ -88,6 +89,13 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
                 : [{ text: "Loading story...", imageUrl: null }]),
         [sectionsProp, story.sections]
     );
+
+    // Whether this reader is on the currently-focused screen. A BookReader can
+    // stay mounted on an inactive tab — e.g. the Lab tab still holds the
+    // generated story (StoryScreen renders it whenever story.content is set,
+    // which opening a bookshelf book also populates). Only the focused reader is
+    // allowed to narrate, otherwise two instances auto-play at once.
+    const isFocused = useIsFocused();
 
     const [currentIndex, setCurrentIndex] = useState(0);
     const [audioError, setAudioError] = useState<string | null>(null);
@@ -476,7 +484,7 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
         // skip TTS entirely until they press Play again. Read the preference via
         // getState() so toggling it doesn't re-run this effect mid-page.
         const currentPage = pages[currentIndex];
-        if (currentPage && currentPage.text && useNarrationStore.getState().isAutoPlayEnabled) {
+        if (currentPage && currentPage.text && isFocused && useNarrationStore.getState().isAutoPlayEnabled) {
             void (async () => {
                 const ready = await generateAndLoadAudio(currentIndex, currentPage.text);
                 // Bail if the user navigated away or opted out while audio loaded.
@@ -513,7 +521,15 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
         return () => {
             cancelled = true;
         };
-    }, [currentIndex, pages, generateAndLoadAudio, playLoadedAudio, story.storyId, updatePageImage, isEndPage]);
+    }, [currentIndex, pages, generateAndLoadAudio, playLoadedAudio, story.storyId, updatePageImage, isEndPage, isFocused]);
+
+    // Stop narration as soon as this reader loses focus, so an instance left
+    // mounted on an inactive tab can't keep playing over the focused reader.
+    useEffect(() => {
+        if (!isFocused && playerRef.current) {
+            void stopPlayback();
+        }
+    }, [isFocused, stopPlayback]);
 
     // Track story_opened once on mount
     useEffect(() => {
