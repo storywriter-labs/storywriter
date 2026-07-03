@@ -31,12 +31,16 @@ const StoryScreen = () => {
     conversationRef.current?.startConversation();
   };
 
-  // Show story content (without background)
+  // Show story content (without background). Gate the reader on isFocused so an
+  // unfocused Lab tab doesn't mount an off-screen BookReader — that mount fires a
+  // STORY_OPENED analytics event and kicks off lazy page-image generation for a
+  // reader nobody is looking at (e.g. when a bookshelf book is opened on another
+  // tab). See card #42.
   if (story.content) {
     return (
       <Layout>
         <View style={s.container}>
-          <StoryContent />
+          {isFocused && <StoryContent />}
         </View>
       </Layout>
     );
