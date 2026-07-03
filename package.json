@@ -20,6 +20,7 @@
     "@aws-sdk/client-transcribe-streaming": "^3.848.0",
     "@elevenlabs/client": "^0.3.0",
     "@elevenlabs/elevenlabs-js": "^2.5.0",
+    "@octokit/rest": "^22.0.1",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/slider": "5.1.2",
     "axios": "^1.13.2",

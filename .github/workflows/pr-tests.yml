@@ -1,0 +1,45 @@
+name: PR Tests
+
+# Type-check, lint, and test on every PR.
+#
+# SECURITY: This job DOES check out and run PR-authored code (npm ci runs
+# lifecycle scripts, tests run PR test files). That is safe here because it runs
+# on `pull_request`, has NO secrets, and requests only a read-only token — so
+# even a malicious PR has nothing to steal. Do NOT add secrets or write
+# permissions to this workflow.
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '24'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TypeScript type checking
+        run: npm run type-check
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Run tests
+        run: npm run test
