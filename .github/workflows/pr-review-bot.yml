@@ -1,4 +1,4 @@
-name: AI PR Review
+name: PR Review Bot
 
 # Bot to review new pull requests.
 #

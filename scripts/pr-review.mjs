@@ -202,7 +202,7 @@ async function callLLM({ provider, model, prompt }) {
       "content-type": "application/json",
       ...(provider === "openrouter" ? {
         "HTTP-Referer": "https://github.com",
-        "X-Title": "GitHub AI PR Review",
+        "X-Title": "GitHub PR Review Bot",
       } : {}),
     },
     body: JSON.stringify({
