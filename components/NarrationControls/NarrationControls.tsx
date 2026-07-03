@@ -14,9 +14,17 @@ interface NarrationControlsProps {
     errorMessage?: string | null;
     /** Optional retry callback (only shown when error can be retried) */
     onRetry?: () => void;
+    /**
+     * When true (web only), the browser blocked autoplay and narration is
+     * loaded but waiting on a user gesture. Shows a "Tap to start narration"
+     * prompt in place of the play button instead of a generic error.
+     */
+    showTapToStart?: boolean;
+    /** Callback for the tap-to-start prompt (starts the loaded narration). */
+    onTapToStart?: () => void;
 }
 
-export function NarrationControls({ onPlay, onPause, errorMessage, onRetry }: NarrationControlsProps) {
+export function NarrationControls({ onPlay, onPause, errorMessage, onRetry, showTapToStart, onTapToStart }: NarrationControlsProps) {
     const isNarrationPlaying = useNarrationStore(s => s.isNarrationPlaying);
     const isLoadingAudio = useNarrationStore(s => s.isLoadingAudio);
     const isRateLimited = useNarrationStore(s => s.isRateLimited);
@@ -44,9 +52,23 @@ export function NarrationControls({ onPlay, onPause, errorMessage, onRetry }: Na
                 </View>
             )}
 
-            {/* Play/Pause Button */}
+            {/* Play/Pause Button (or tap-to-start prompt when autoplay is blocked) */}
             {isLoadingAudio ? (
                 <ActivityIndicator size="small" color="#D35400" />
+            ) : showTapToStart && !isNarrationPlaying ? (
+                <TouchableOpacity
+                    onPress={onTapToStart}
+                    style={styles.tapToStartButton}
+                    disabled={isRateLimited}
+                    accessible={true}
+                    accessibilityLabel="Tap to start narration"
+                    accessibilityRole="button"
+                >
+                    <View style={styles.tapToStartContent}>
+                        <Ionicons name="volume-high" size={20} color={Colors.white} />
+                        <Text style={styles.tapToStartText}>Tap to start narration</Text>
+                    </View>
+                </TouchableOpacity>
             ) : (
                 <TouchableOpacity
                     onPress={isNarrationPlaying ? onPause : onPlay}

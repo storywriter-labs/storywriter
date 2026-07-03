@@ -23,6 +23,7 @@ export type {
   NarrationPlayerConfig,
   PlaybackCompletionCallback,
 } from './types';
+export { AutoplayBlockedError } from './types';
 
 // Export native implementation (iOS/Android)
 export { createNarrationPlayer } from './native';

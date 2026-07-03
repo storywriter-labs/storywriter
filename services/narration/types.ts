@@ -11,6 +11,23 @@
 export type PlaybackCompletionCallback = () => void;
 
 /**
+ * Thrown by a narration player's `play()` when the browser blocks programmatic
+ * playback because there was no recent user gesture (autoplay policy). Only the
+ * web player raises this — native (`expo-audio`) is unaffected. Callers can
+ * detect it (`instanceof AutoplayBlockedError`) to prompt for a one-tap start
+ * instead of treating it as a generic playback failure.
+ */
+export class AutoplayBlockedError extends Error {
+  constructor(message = 'Autoplay was blocked by the browser') {
+    super(message);
+    this.name = 'AutoplayBlockedError';
+    // Restore prototype chain for `instanceof` after transpilation to ES5-ish
+    // targets (extending built-ins otherwise breaks the check).
+    Object.setPrototypeOf(this, AutoplayBlockedError.prototype);
+  }
+}
+
+/**
  * Configuration options for initializing the narration player
  */
 export interface NarrationPlayerConfig {

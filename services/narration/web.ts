@@ -10,6 +10,17 @@ import type {
   NarrationPlayerConfig,
   PlaybackCompletionCallback,
 } from './types';
+import { AutoplayBlockedError } from './types';
+
+/**
+ * Detect the browser autoplay-policy block: calling `play()` without a recent
+ * user gesture rejects with a `NotAllowedError` DOMException. Surfaced as an
+ * `AutoplayBlockedError` so callers can prompt for a one-tap start instead of
+ * showing a generic playback error.
+ */
+function isAutoplayBlockedError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'NotAllowedError';
+}
 
 /**
  * HTML5 Audio-based narration player for web platform
@@ -69,6 +80,10 @@ export class WebNarrationPlayer implements NarrationPlayer {
       await this.audio.play();
       this.playing = true;
     } catch (error) {
+      this.playing = false;
+      if (isAutoplayBlockedError(error)) {
+        throw new AutoplayBlockedError();
+      }
       throw new Error(
         `Failed to play audio: ${error instanceof Error ? error.message : 'Unknown error'}`
       );

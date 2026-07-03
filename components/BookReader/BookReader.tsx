@@ -17,7 +17,7 @@ import { useConversationStore } from '@/src/stores/conversationStore';
 import { useStoryStore } from '@/src/stores/storyStore';
 import { useNarrationStore } from '@/src/stores/narrationStore';
 import { StorySection } from '@/types/story';
-import { createNarrationPlayer } from '@/services/narration';
+import { createNarrationPlayer, AutoplayBlockedError } from '@/services/narration';
 import type { NarrationPlayer } from '@/services/narration';
 import audioCache from '@/services/narration/audioCache';
 import elevenLabsService from '@/services/elevenLabsService';
@@ -101,6 +101,10 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
     const [audioError, setAudioError] = useState<string | null>(null);
     const [canRetry, setCanRetry] = useState(false);
     const [isLoadingImage, setIsLoadingImage] = useState(false);
+    // Web only: the browser blocked programmatic autoplay (no recent user
+    // gesture). Audio is loaded and ready — we just need a one-tap start instead
+    // of surfacing a generic error/retry.
+    const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 
     const isEndPage = currentIndex === pages.length;
     const playerRef = useRef<NarrationPlayer | null>(null);
@@ -262,11 +266,27 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
             await playerRef.current.play();
             setNarrationPlaying(true);
             setAudioError(null);
+            setAutoplayBlocked(false);
             trackEvent(AnalyticsEvents.NARRATION_PLAYED, {
                 story_id: storyIdRef.current,
                 page_index: currentIndex,
             });
         } catch (error) {
+            // Web autoplay policy: the browser blocked programmatic play() with
+            // no recent user gesture. The audio is loaded and ready, so keep the
+            // player and prompt for a one-tap start instead of showing an error.
+            if (error instanceof AutoplayBlockedError) {
+                setNarrationPlaying(false);
+                setAutoplayBlocked(true);
+                setAudioError(null);
+                setCanRetry(false);
+                trackEvent(AnalyticsEvents.NARRATION_AUTOPLAY_BLOCKED, {
+                    story_id: storyIdRef.current,
+                    page_index: currentIndex,
+                });
+                return;
+            }
+
             // Log playback failure with context
             logger.error(
                 LogCategory.AUDIO,
@@ -308,6 +328,7 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
     // play. Re-enabling the preference resumes auto-play on subsequent pages.
     const handlePlay = useCallback(async () => {
         setAutoPlayEnabled(true);
+        setAutoplayBlocked(false);
         if (isLoadingAudio) {
             return;
         }
@@ -478,6 +499,8 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
 
         // Reset image loading state on page change
         setIsLoadingImage(false);
+        // Clear any prior autoplay-blocked prompt; this page gets a fresh attempt.
+        setAutoplayBlocked(false);
 
         // Auto-play: when the auto-play preference is on, generate the page's
         // narration and start it automatically. When off (the user paused), we
@@ -735,6 +758,8 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
                         onPause={handlePause}
                         errorMessage={audioError}
                         onRetry={canRetry ? handleRetry : undefined}
+                        showTapToStart={autoplayBlocked}
+                        onTapToStart={handlePlay}
                     />
                 </View>
             )}

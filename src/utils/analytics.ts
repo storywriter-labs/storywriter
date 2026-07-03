@@ -38,6 +38,7 @@ export const AnalyticsEvents = {
   NARRATION_PAUSED: 'narration_paused',
   NARRATION_FAILED: 'narration_failed',
   NARRATION_RETRIED: 'narration_retried',
+  NARRATION_AUTOPLAY_BLOCKED: 'narration_autoplay_blocked',
 
   // Bookshelf
   BOOKSHELF_VIEWED: 'bookshelf_viewed',
