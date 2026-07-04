@@ -167,7 +167,8 @@ function normalizeDecision(d) {
 }
 
 function safeParseJson(text) {
-  const trimmed = text.trim();
+  const trimmed = (text || "").trim();
+  if (!trimmed) throw new Error("Model returned an empty response (nothing to parse).");
 
   // Remove markdown fences if the model accidentally adds them
   const cleaned = trimmed
@@ -178,7 +179,7 @@ function safeParseJson(text) {
   try {
     return JSON.parse(cleaned);
   } catch {
-    throw new Error(`Model did not return valid JSON:\n${text}`);
+    throw new Error(`Model did not return valid JSON. Raw output (truncated):\n${trimmed.slice(0, 2000)}`);
   }
 }
 
@@ -203,7 +204,15 @@ async function callLLM({ provider, model, prompt }) {
 
     if (!res.ok) throw new Error(`Anthropic API error: ${res.status} ${await res.text()}`);
     const data = await res.json();
-    return data.content?.[0]?.text || "";
+
+    const text = data.content?.[0]?.text?.trim();
+    if (!text) {
+      throw new Error(
+        `Anthropic returned no text (model="${model}", stop_reason=${data.stop_reason ?? "?"}).\n` +
+        `Raw response (truncated): ${JSON.stringify(data).slice(0, 2000)}`
+      );
+    }
+    return text;
   }
 
   const apiKey =
@@ -235,6 +244,9 @@ async function callLLM({ provider, model, prompt }) {
     body: JSON.stringify({
       model,
       temperature: 0.2,
+      // Reasoning models (e.g. GLM-5.x) spend tokens on hidden reasoning; without a generous
+      // budget the visible content comes back empty/truncated. Mirror the Anthropic branch.
+      max_tokens: 4000,
       messages: [
         { role: "system", content: "Return valid JSON only. No markdown." },
         { role: "user", content: prompt },
@@ -244,5 +256,24 @@ async function callLLM({ provider, model, prompt }) {
 
   if (!res.ok) throw new Error(`${provider} API error: ${res.status} ${await res.text()}`);
   const data = await res.json();
-  return data.choices?.[0]?.message?.content || "";
+
+  // Some OpenAI-compatible providers return HTTP 200 with an error object in the body
+  // (e.g. an unknown model id), so a non-error status is not enough on its own.
+  if (data.error) {
+    throw new Error(`${provider} API returned an error for model="${model}": ${JSON.stringify(data.error)}`);
+  }
+
+  const choice = data.choices?.[0];
+  const content = choice?.message?.content?.trim();
+  if (!content) {
+    // Surface the raw response so a blank/failed completion is diagnosable, not a mystery.
+    // Common causes: invalid/unavailable model id, or a reasoning model that put its output
+    // in message.reasoning_content instead of message.content.
+    throw new Error(
+      `${provider} returned no usable content (model="${model}", ` +
+      `finish_reason=${choice?.finish_reason ?? "?"}).\n` +
+      `Raw response (truncated): ${JSON.stringify(data).slice(0, 2000)}`
+    );
+  }
+  return content;
 }
