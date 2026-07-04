@@ -1,0 +1,57 @@
+name: PR Review Bot
+
+# Bot to review new pull requests.
+#
+# SECURITY: This job holds LLM API keys and a write-scoped GITHUB_TOKEN, so it
+# must NEVER check out or execute PR-authored code. It only reads the diff via
+# the GitHub API (scripts/pr-review.mjs) and sends text to an LLM.
+#
+# We use `pull_request` (not `pull_request_target`) on purpose: fork PRs get a
+# read-only token and NO secrets, so a fork can never expose our keys. Same-repo
+# branch PRs still receive secrets + write access, so the bot works normally.
+# The checkout below has no `ref:`, so it pulls OUR trusted code, not the PR's.
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+# Cancel an in-flight review if the PR gets a new push — saves CI minutes and LLM spend.
+concurrency:
+  group: pr-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      # Third-party actions are pinned to a commit SHA (tags are mutable). Comments note the version.
+      - name: Checkout base repo (our trusted code, not the PR head)
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 24
+
+      # No `npm ci`: the review script uses only Node built-ins (node:fs + global fetch),
+      # so there are no dependencies to install.
+      - name: Run PR Review Bot
+        run: node scripts/pr-review.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+          # Pick one provider:
+          LLM_PROVIDER: ${{ vars.LLM_PROVIDER }} # openai | anthropic | together | openrouter
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
