@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 const token = process.env.GITHUB_TOKEN;
 const provider = process.env.LLM_PROVIDER;
 const model = process.env.LLM_MODEL;
+const maxTokens = Number(process.env.LLM_MAX_TOKENS) || 4000; // tune without code edits
 
 if (!token) throw new Error("GITHUB_TOKEN is required");
 if (!provider) throw new Error("LLM_PROVIDER is required");
@@ -197,7 +198,7 @@ async function callLLM({ provider, model, prompt }) {
       },
       body: JSON.stringify({
         model,
-        max_tokens: 3000,
+        max_tokens: maxTokens,
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -245,8 +246,9 @@ async function callLLM({ provider, model, prompt }) {
       model,
       temperature: 0.2,
       // Reasoning models (e.g. GLM-5.x) spend tokens on hidden reasoning; without a generous
-      // budget the visible content comes back empty/truncated. Mirror the Anthropic branch.
-      max_tokens: 4000,
+      // budget the visible content comes back empty/truncated. Prefer a non-reasoning
+      // instruct model for this JSON task; raise LLM_MAX_TOKENS if you keep a reasoning one.
+      max_tokens: maxTokens,
       messages: [
         { role: "system", content: "Return valid JSON only. No markdown." },
         { role: "user", content: prompt },
