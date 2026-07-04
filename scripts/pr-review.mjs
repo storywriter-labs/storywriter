@@ -107,31 +107,7 @@ const decision = normalizeDecision(review.decision);
 // (prompt injection), so a human must always gate the merge — map "approve" down to COMMENT.
 const reviewEvent = decision === "request_changes" ? "REQUEST_CHANGES" : "COMMENT";
 
-// Post inline comments first
-const inlineComments = Array.isArray(review.inline_comments) ? review.inline_comments : [];
-const failedInline = [];
-
-for (const c of inlineComments) {
-  try {
-    if (!c?.path || !c?.line || !c?.body) throw new Error("Invalid inline comment payload");
-
-    await github("POST", `/repos/${owner}/${repo}/pulls/${pull_number}/comments`, {
-      commit_id: prData.head.sha,
-      path: c.path,
-      line: c.line,
-      side: c.side || "RIGHT",
-      body: c.body,
-    });
-  } catch (err) {
-    failedInline.push({
-      path: c?.path,
-      line: c?.line,
-      body: c?.body,
-      error: err.message,
-    });
-  }
-}
-
+// Build the review body (summary + notes).
 let body = review.summary_comment || "AI review completed.";
 body += "\n\n## Decision tree\n";
 for (const item of review.decision_tree || []) body += `- ${item}\n`;
@@ -146,17 +122,33 @@ if (review.non_blocking_notes?.length) {
   for (const item of review.non_blocking_notes) body += `- ${item}\n`;
 }
 
-if (failedInline.length) {
-  body += "\n## Inline comments that could not be placed\n";
-  for (const item of failedInline) {
-    body += `- ${item.path}:${item.line} — ${item.body} (${item.error})\n`;
-  }
-}
+// Attach inline comments to the SINGLE review (posting them individually would create a
+// second, empty-bodied review). The reviews endpoint takes a `comments` array.
+const inlineComments = Array.isArray(review.inline_comments) ? review.inline_comments : [];
+const comments = inlineComments
+  .filter((c) => c?.path && c?.line && c?.body)
+  .map((c) => ({ path: c.path, line: c.line, side: c.side || "RIGHT", body: c.body }));
 
-await github("POST", `/repos/${owner}/${repo}/pulls/${pull_number}/reviews`, {
-  body,
-  event: reviewEvent,
-});
+try {
+  await github("POST", `/repos/${owner}/${repo}/pulls/${pull_number}/reviews`, {
+    commit_id: prData.head.sha,
+    body,
+    event: reviewEvent,
+    comments,
+  });
+} catch (err) {
+  // GitHub rejects the entire review (422) if any inline comment targets a line that
+  // isn't part of the diff. Fall back to one review with no inline comments, folding the
+  // notes into the body so no feedback is lost (still a single review, not two).
+  if (!comments.length) throw err;
+  let fallbackBody = body + "\n\n## Inline comments (could not attach to specific lines)\n";
+  for (const c of comments) fallbackBody += `- ${c.path}:${c.line} — ${c.body}\n`;
+  fallbackBody += `\n_(${err.message})_\n`;
+  await github("POST", `/repos/${owner}/${repo}/pulls/${pull_number}/reviews`, {
+    body: fallbackBody,
+    event: reviewEvent,
+  });
+}
 
 console.log(`Submitted review: ${reviewEvent}`);
 
