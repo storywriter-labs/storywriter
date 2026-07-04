@@ -22,6 +22,7 @@ export type {
   NarrationPlayerConfig,
   PlaybackCompletionCallback,
 } from './types';
+export { AutoplayBlockedError } from './types';
 
 // Export web implementation (HTML5 Audio)
 export { createNarrationPlayer } from './web';
