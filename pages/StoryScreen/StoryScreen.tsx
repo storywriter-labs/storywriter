@@ -32,10 +32,11 @@ const StoryScreen = () => {
   };
 
   // Show story content (without background). Gate the reader on isFocused so an
-  // unfocused Lab tab doesn't mount an off-screen BookReader — that mount fires a
-  // STORY_OPENED analytics event and kicks off lazy page-image generation for a
-  // reader nobody is looking at (e.g. when a bookshelf book is opened on another
-  // tab). See card #42.
+  // unfocused Lab tab doesn't mount an off-screen BookReader for the in-progress
+  // creation's story — that mount fires a STORY_OPENED analytics event and kicks
+  // off lazy page-image generation for a reader nobody is looking at (e.g. while
+  // browsing another tab). See card #42; the bookshelf reader (card #47) has its
+  // own local state and no longer shares this store slice at all.
   if (story.content) {
     return (
       <Layout>

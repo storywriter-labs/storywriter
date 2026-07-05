@@ -7,6 +7,7 @@ import { useNarrationStore } from '@/src/stores/narrationStore';
 import { createNarrationPlayer } from '@/services/narration';
 import elevenLabsService from '@/services/elevenLabsService';
 import audioCache from '@/services/narration/audioCache';
+import storyGenerationService from '@/services/storyGenerationService';
 
 // ---------------------------------------------------------------------------
 // Component tests for BookReader auto-play wiring (Fizzy card #39).
@@ -197,5 +198,67 @@ describe('BookReader – auto-play behavior (card #39)', () => {
             expect(currentPlayer().play).toHaveBeenCalledTimes(1);
         });
         expect(useNarrationStore.getState().isAutoPlayEnabled).toBe(true);
+    });
+});
+
+describe('BookReader – bookshelf reader does not share the creation story slice (card #47)', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        audioCache.clear();
+        mockIsFocused = true;
+        seedStory();
+        resetNarration();
+    });
+
+    afterEach(() => {
+        cleanup();
+    });
+
+    it('props-driven mode: lazy-loads a page image via the given storyId and reports it back through onUpdatePageImage instead of the shared store', async () => {
+        const propsSections = [
+            { text: 'Once upon a time...', imageUrl: null, illustrationPrompt: 'a fox in the woods' },
+        ];
+        const onUpdatePageImage = jest.fn();
+        const generatePageImageMock = storyGenerationService.generatePageImage as jest.Mock;
+        generatePageImageMock.mockResolvedValueOnce('https://example.com/fox.png');
+
+        const storySliceBefore = useStoryStore.getState().story;
+
+        render(
+            <BookReader
+                sections={propsSections}
+                storyId={42}
+                onBack={jest.fn()}
+                onUpdatePageImage={onUpdatePageImage}
+            />
+        );
+
+        await waitFor(() => {
+            expect(onUpdatePageImage).toHaveBeenCalledWith(0, 'https://example.com/fox.png');
+        });
+
+        expect(generatePageImageMock).toHaveBeenCalledWith(42, 1);
+        // The shared creation-flow story slice must be untouched by a bookshelf read.
+        expect(useStoryStore.getState().story).toBe(storySliceBefore);
+    });
+
+    it('store-driven mode (no props): still lazy-loads via the shared story slice when no onUpdatePageImage is given', async () => {
+        useStoryStore.setState({
+            story: {
+                content: null,
+                sections: [{ text: 'Once upon a time...', imageUrl: null, illustrationPrompt: 'a fox in the woods' }],
+                storyId: 7,
+                name: 'The Brave Fox',
+            },
+        });
+        const generatePageImageMock = storyGenerationService.generatePageImage as jest.Mock;
+        generatePageImageMock.mockResolvedValueOnce('https://example.com/fox.png');
+
+        render(<BookReader onBack={jest.fn()} />);
+
+        await waitFor(() => {
+            expect(useStoryStore.getState().story.sections[0].imageUrl).toBe('https://example.com/fox.png');
+        });
+        expect(generatePageImageMock).toHaveBeenCalledWith(7, 1);
     });
 });

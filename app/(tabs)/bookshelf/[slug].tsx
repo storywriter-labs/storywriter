@@ -1,17 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import client from '@/src/api/client';
 import BookReader from '@/components/BookReader/BookReader';
 import { parseStoryBody } from '@/src/utils/parseStoryBody';
 import { StorySection } from '@/types/story';
-import { useStoryStore } from '@/src/stores/storyStore';
 
 export default function StoryDetailScreen() {
     const { slug } = useLocalSearchParams<{ slug: string }>();
     const router = useRouter();
+    // Local to this screen — a saved/bookshelf story never touches the shared
+    // storyStore slice used by the in-progress creation flow, so opening one
+    // can't clobber a story the user is still creating (card #47).
     const [sections, setSections] = useState<StorySection[]>([]);
-    const [isLegacy, setIsLegacy] = useState(false);
+    const [storyId, setStoryId] = useState<number | null>(null);
+    const [storyName, setStoryName] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -29,22 +32,14 @@ export default function StoryDetailScreen() {
                         illustrationPrompt: p.illustrationPrompt ?? null,
                     }));
                     setSections(mappedSections);
-
-                    // Set story data in story store for lazy image loading
-                    useStoryStore.setState({
-                        story: {
-                            content: story.body || null,
-                            sections: mappedSections,
-                            storyId: story.id,
-                            name: story.title || story.name || null,
-                        },
-                    });
                 } else {
                     // Legacy: parse from body
                     const { sections: parsed } = parseStoryBody(story.body);
                     setSections(parsed);
-                    setIsLegacy(true);
                 }
+
+                setStoryId(story.id ?? null);
+                setStoryName(story.title || story.name || null);
             } catch {
                 setError('Could not load this story.');
             } finally {
@@ -56,6 +51,15 @@ export default function StoryDetailScreen() {
             void fetchStory();
         }
     }, [slug]);
+
+    const handleUpdatePageImage = useCallback((pageIndex: number, imageUrl: string) => {
+        setSections(prev => {
+            if (pageIndex < 0 || pageIndex >= prev.length) return prev;
+            const next = [...prev];
+            next[pageIndex] = { ...next[pageIndex], imageUrl };
+            return next;
+        });
+    }, []);
 
     if (loading) {
         return (
@@ -78,7 +82,13 @@ export default function StoryDetailScreen() {
 
     return (
         <View style={styles.fullScreen}>
-            <BookReader sections={isLegacy ? sections : undefined} onBack={() => router.push('/bookshelf')} />
+            <BookReader
+                sections={sections}
+                name={storyName ?? undefined}
+                storyId={storyId}
+                onBack={() => router.push('/bookshelf')}
+                onUpdatePageImage={handleUpdatePageImage}
+            />
         </View>
     );
 }
