@@ -121,7 +121,7 @@ const decision = normalizeDecision(review.decision);
 const reviewEvent = decision === "request_changes" ? "REQUEST_CHANGES" : "COMMENT";
 
 // Build the review body (summary + notes).
-let body = review.summary_comment || "AI review completed.";
+let body = `### 🤖 PR Review Bot\n\n${review.summary_comment || "AI review completed."}`;
 
 if (review.blocking_issues?.length) {
   body += "\n## Blocking issues\n";
@@ -132,6 +132,10 @@ if (review.non_blocking_notes?.length) {
   body += "\n## Non-blocking notes\n";
   for (const item of review.non_blocking_notes) body += `- ${item}\n`;
 }
+
+// Record which provider/model produced this review — makes it possible to compare review
+// quality across model swaps later without cross-referencing repo variable history.
+body += `\n\n<sub>Reviewed by \`${provider}/${model}\`</sub>`;
 
 // Attach inline comments to the SINGLE review (posting them individually would create a
 // second, empty-bodied review). The reviews endpoint takes a `comments` array.
