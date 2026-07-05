@@ -65,9 +65,22 @@ const [prData, files] = await Promise.all([
 
 const skill = await fs.readFile(".github/skills/pr-review.md", "utf8");
 
+// Lockfiles are machine-generated and can dwarf the actual code change (a bump of one
+// package can rewrite hundreds of lines of peer/libc metadata). Sending the full patch
+// wastes context and dilutes model attention on the files that matter, so summarize instead.
+const LOCKFILE_NAMES = new Set([
+  "package-lock.json",
+  "yarn.lock",
+  "pnpm-lock.yaml",
+  "composer.lock",
+]);
+
 const diffText = files
   .map((f) => {
-    const patch = f.patch ?? "(no patch available: binary file or too large)";
+    const isLockfile = LOCKFILE_NAMES.has(f.filename.split("/").pop());
+    const patch = isLockfile
+      ? "(lockfile: patch omitted from review — dependency version bumps only)"
+      : f.patch ?? "(no patch available: binary file or too large)";
     return `FILE: ${f.filename}
 STATUS: ${f.status}
 CHANGES: +${f.additions} -${f.deletions}
@@ -109,8 +122,6 @@ const reviewEvent = decision === "request_changes" ? "REQUEST_CHANGES" : "COMMEN
 
 // Build the review body (summary + notes).
 let body = review.summary_comment || "AI review completed.";
-body += "\n\n## Decision tree\n";
-for (const item of review.decision_tree || []) body += `- ${item}\n`;
 
 if (review.blocking_issues?.length) {
   body += "\n## Blocking issues\n";
