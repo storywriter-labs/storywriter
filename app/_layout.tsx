@@ -141,8 +141,8 @@ function RootLayoutNav() {
 
     if (!isAuthenticated && !inAuthGroup) {
       // User is NOT logged in, but is trying to access app screens (or root /)
-      // Redirect them to the sign-in page
-      router.replace('/(auth)/login');
+      // Redirect them to the landing page
+      router.replace('/(auth)/welcome');
     } else if (isAuthenticated && inAuthGroup) {
       // User IS logged in, but is on the login page
       // Redirect them to the tabs
