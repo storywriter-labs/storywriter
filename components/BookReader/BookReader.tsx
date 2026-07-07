@@ -29,7 +29,12 @@ import storyGenerationService from '@/services/storyGenerationService';
 interface BookReaderProps {
     sections?: StorySection[];
     name?: string;
+    storyId?: number | null;
     onBack?: () => void;
+    // When reading from props (e.g. the bookshelf reader), lazily-generated
+    // page images are reported back through this callback instead of writing
+    // into the shared storyStore slice — see card #47.
+    onUpdatePageImage?: (pageIndex: number, imageUrl: string) => void;
 }
 
 const ShimmerPlaceholder = () => {
@@ -65,9 +70,9 @@ const ShimmerPlaceholder = () => {
     );
 };
 
-const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = {}) => {
+const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack, onUpdatePageImage }: BookReaderProps = {}) => {
     const story = useStoryStore(s => s.story);
-    const updatePageImage = useStoryStore(s => s.updatePageImage);
+    const updatePageImageStore = useStoryStore(s => s.updatePageImage);
     const resetConversation = useConversationStore(s => s.resetConversation);
     const resetStory = useStoryStore(s => s.resetStory);
     const resetNarration = useNarrationStore(s => s.resetNarration);
@@ -90,11 +95,23 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
         [sectionsProp, story.sections]
     );
 
+    // When driven by props (bookshelf reader), the story id and page-image
+    // updates come from/go back to the caller's own local state, not the
+    // shared storyStore slice used by the in-progress creation flow.
+    const effectiveStoryId = sectionsProp ? (storyIdProp ?? null) : story.storyId;
+    const handlePageImageUpdate = useCallback((pageIndex: number, imageUrl: string) => {
+        if (onUpdatePageImage) {
+            onUpdatePageImage(pageIndex, imageUrl);
+        } else {
+            updatePageImageStore(pageIndex, imageUrl);
+        }
+    }, [onUpdatePageImage, updatePageImageStore]);
+
     // Whether this reader is on the currently-focused screen. A BookReader can
-    // stay mounted on an inactive tab — e.g. the Lab tab still holds the
-    // generated story (StoryScreen renders it whenever story.content is set,
-    // which opening a bookshelf book also populates). Only the focused reader is
-    // allowed to narrate, otherwise two instances auto-play at once.
+    // stay mounted on an inactive tab — e.g. the Lab tab still holds an
+    // in-progress creation's story.content and renders its own BookReader
+    // whenever that's set. Only the focused reader is allowed to narrate,
+    // otherwise two instances auto-play at once.
     const isFocused = useIsFocused();
 
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -518,20 +535,19 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
         }
 
         // Lazy image fetching: if page has illustrationPrompt but no imageUrl, generate on demand
-        const storyId = story.storyId;
         if (
             currentPage &&
             currentPage.illustrationPrompt &&
             !currentPage.imageUrl &&
-            storyId
+            effectiveStoryId
         ) {
             setIsLoadingImage(true);
             const pageNumber = currentIndex + 1; // API uses 1-based page numbers
-            storyGenerationService.generatePageImage(storyId, pageNumber)
+            storyGenerationService.generatePageImage(effectiveStoryId, pageNumber)
                 .then((url) => {
                     if (cancelled) return;
                     if (url) {
-                        updatePageImage(currentIndex, url);
+                        handlePageImageUpdate(currentIndex, url);
                     }
                     setIsLoadingImage(false);
                 })
@@ -544,7 +560,7 @@ const BookReader = ({ sections: sectionsProp, name, onBack }: BookReaderProps = 
         return () => {
             cancelled = true;
         };
-    }, [currentIndex, pages, generateAndLoadAudio, playLoadedAudio, story.storyId, updatePageImage, isEndPage, isFocused]);
+    }, [currentIndex, pages, generateAndLoadAudio, playLoadedAudio, effectiveStoryId, handlePageImageUpdate, isEndPage, isFocused]);
 
     // Stop narration as soon as this reader loses focus, so an instance left
     // mounted on an inactive tab can't keep playing over the focused reader.
