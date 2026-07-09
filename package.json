@@ -18,8 +18,7 @@
   "dependencies": {
     "@aws-sdk/client-polly": "^3.848.0",
     "@aws-sdk/client-transcribe-streaming": "^3.848.0",
-    "@elevenlabs/client": "^0.3.0",
-    "@elevenlabs/elevenlabs-js": "^2.5.0",
+    "@elevenlabs/client": "^1.14.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/slider": "5.1.2",
     "axios": "^1.13.2",
@@ -93,7 +92,7 @@
       "<rootDir>/jest.setup.js"
     ],
     "transformIgnorePatterns": [
-      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|zustand)"
+      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|zustand|@elevenlabs/.*)"
     ],
     "testPathIgnorePatterns": [
       "<rootDir>/node_modules/",
