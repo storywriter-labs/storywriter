@@ -121,16 +121,16 @@ const decision = normalizeDecision(review.decision);
 const reviewEvent = decision === "request_changes" ? "REQUEST_CHANGES" : "COMMENT";
 
 // Build the review body (summary + notes).
-let body = `### 🤖 PR Review Bot\n\n${review.summary_comment || "AI review completed."}`;
+let body = `### 🤖 PR Review Bot\n\n${toText(review.summary_comment) || "AI review completed."}`;
 
 if (review.blocking_issues?.length) {
   body += "\n## Blocking issues\n";
-  for (const item of review.blocking_issues) body += `- ${item}\n`;
+  for (const item of review.blocking_issues) body += `- ${toText(item)}\n`;
 }
 
 if (review.non_blocking_notes?.length) {
   body += "\n## Non-blocking notes\n";
-  for (const item of review.non_blocking_notes) body += `- ${item}\n`;
+  for (const item of review.non_blocking_notes) body += `- ${toText(item)}\n`;
 }
 
 // Record which provider/model produced this review — makes it possible to compare review
@@ -141,8 +141,8 @@ body += `\n\n<sub>Reviewed by \`${provider}/${model}\`</sub>`;
 // second, empty-bodied review). The reviews endpoint takes a `comments` array.
 const inlineComments = Array.isArray(review.inline_comments) ? review.inline_comments : [];
 const comments = inlineComments
-  .filter((c) => c?.path && c?.line && c?.body)
-  .map((c) => ({ path: c.path, line: c.line, side: c.side || "RIGHT", body: c.body }));
+  .map((c) => ({ path: c?.path, line: Number(c?.line), side: c?.side || "RIGHT", body: toText(c?.body) }))
+  .filter((c) => c.path && Number.isFinite(c.line) && c.body);
 
 try {
   await github("POST", `/repos/${owner}/${repo}/pulls/${pull_number}/reviews`, {
@@ -166,6 +166,21 @@ try {
 }
 
 console.log(`Submitted review: ${reviewEvent}`);
+
+// Weaker models sometimes don't follow the requested JSON schema and wrap a note/comment
+// in an object (e.g. { note: "..." }) instead of returning a bare string. Left unguarded,
+// naive `${item}` interpolation prints the literal text "[object Object]" into the posted
+// GitHub review. Unwrap common field names, or fall back to JSON so nothing is silently lost.
+function toText(value) {
+  if (typeof value === "string") return value;
+  if (value == null) return "";
+  if (typeof value === "object") {
+    const candidate = value.text ?? value.note ?? value.comment ?? value.body ?? value.message;
+    if (typeof candidate === "string") return candidate;
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
 
 function normalizeDecision(d) {
   const v = String(d || "").toLowerCase();

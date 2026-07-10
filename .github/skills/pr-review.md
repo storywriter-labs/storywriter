@@ -59,3 +59,6 @@ Inline comment guidance:
 - Use questions for uncertainty, e.g. “Could this ever be null here?”
 - Keep inline comments concise and actionable.
 - If you cannot confidently place a line-specific comment, put it in `non_blocking_notes` instead.
+- Do not leave a comment that only affirms or restates what the line does (e.g. "This correctly
+  handles X", "Good approach here"). An inline comment must flag a risk, bug, edge case, or a
+  genuine open question — if a line has none of those, don't comment on it at all.
