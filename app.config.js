@@ -1,5 +1,9 @@
 require('dotenv').config();
 
+// Single source of truth for the app version: package.json, bumped via `npm version`,
+// which also creates the matching vX.Y.Z git tag.
+const { version } = require('./package.json');
+
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const IS_STAGING = process.env.NODE_ENV === 'staging' || process.env.EXPO_ENV === 'staging';
 const IS_DEVELOPMENT = !IS_PRODUCTION && !IS_STAGING;
@@ -32,7 +36,7 @@ export default ({ config }) => ({
   expo: {
     name: IS_PRODUCTION ? 'StoryWriter' : IS_STAGING ? 'StoryWriter (Staging)' : 'StoryWriter (Dev)',
     slug: "storywriter",
-    version: "0.5.0",
+    version,
     orientation: "landscape",
     icon: "./assets/images/icon.png",
     scheme: "storywriter",
