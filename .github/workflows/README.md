@@ -9,8 +9,8 @@ This directory contains GitHub Actions workflows for deploying the StoryWriter f
 Main deployment workflow that handles both staging and production deployments.
 
 **Triggers:**
-- Push to `main` branch → Production deployment
-- Push to `develop` branch → Staging deployment  
+- Push of a `v*` tag → Production deployment
+- Push to `main` branch → Staging deployment
 - Manual trigger → Choose environment (staging/production)
 
 **Features:**
@@ -85,8 +85,8 @@ Both should point to their respective CloudFront distributions.
 ## Usage
 
 ### Automatic Deployments
-- Push to `develop` branch for staging deployment
-- Push to `main` branch for production deployment
+- Push to `main` branch for staging deployment
+- Push a `v*` tag (e.g. `v1.0.0`) for production deployment
 
 ### Manual Deployments
 1. Go to Actions tab in GitHub
