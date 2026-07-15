@@ -13,6 +13,7 @@
     "type-check:watch": "tsc --noEmit --watch",
     "lint": "tsc --noEmit && expo lint",
     "validate": "npm run type-check && npm run test",
+    "preversion": "npm run validate",
     "build:web": "expo export --platform web"
   },
   "dependencies": {
