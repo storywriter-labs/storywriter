@@ -11,10 +11,13 @@ name: PR Review Bot
 # branch PRs still receive secrets + write access, so the bot works normally.
 # The checkout below has no `ref:`, so it pulls OUR trusted code, not the PR's.
 
+# DISABLED: automatic PR reviews are paused. Restore the pull_request trigger
+# below to re-enable.
 on:
-  pull_request:
-    branches: [main]
-    types: [opened, reopened, synchronize, ready_for_review]
+  workflow_dispatch:
+  # pull_request:
+  #   branches: [main]
+  #   types: [opened, reopened, synchronize, ready_for_review]
 
 permissions:
   contents: read
