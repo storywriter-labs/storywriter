@@ -16,12 +16,28 @@ Deploys are driven by [`deploy-frontend.yml`](.github/workflows/deploy-frontend.
 | Trigger | Environment |
 |---|---|
 | Merge/push to `main` | **staging** (unattended) |
-| Push a `v*` tag | **production** (waits for manual approval) |
+| Push a `vX.Y.Z` tag | **production** (waits for manual approval) |
 | Manual `workflow_dispatch` | your choice of staging/production |
 
 The production GitHub environment has a required-reviewer rule, so every
 production deploy — including tag pushes — pauses at an approval button in the
 Actions UI. Staging deploys run unattended.
+
+**Nothing reaches production except from a release tag.** Three things enforce
+that, and it's worth knowing all three, because hitting one of them looks like
+a different failure each time:
+
+- The push trigger only matches semver-shaped tags (`v[0-9]*.[0-9]*.[0-9]*`),
+  so a stray tag like `vnext` simply doesn't start a run.
+- The *Run workflow* ref picker defaults to `main`, and the environment
+  dropdown is otherwise taken at face value — so dispatching `production` from
+  a branch fails fast on the **Require a release tag for production** step.
+  Pick the release tag in the ref dropdown as well as `production`.
+- The `production` GitHub environment restricts deployments to tags matching
+  `v*.*.*`, which holds even if someone edits the workflow. A run that trips
+  this one is rejected at the environment gate rather than by a workflow step.
+
+Staging is deliberately unrestricted — dispatch it from any branch you like.
 
 `package.json` is the single source of truth for the version: `app.config.js`
 reads it, and the git tag is created from it by `npm version`. Never hand-edit
@@ -87,3 +103,10 @@ Two options, depending on how fast you need to be:
   those files and invalidates CloudFront. No rebuild, so it's fast — but it
   only restores the deployed files; the repo/tag state still points at the bad
   release, so follow up with a proper patch release.
+
+  This workflow runs against `production` too, so the environment's tag
+  restriction applies to it as well: **pick a release tag as the ref**, not
+  `main`, or the run is rejected before it starts. It doesn't matter which tag
+  — the workflow only touches S3 and CloudFront, never the checked-out code —
+  but the ref dropdown has to be on one. Worth knowing before you need it, at
+  three in the morning, with the site down.
