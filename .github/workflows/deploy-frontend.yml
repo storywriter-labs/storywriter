@@ -9,7 +9,10 @@ name: Deploy Frontend
 on:
   push:
     branches: [ main ]
-    tags: [ 'v*' ]
+    # Semver-shaped release tags only. A glob is the closest GitHub gets to
+    # validating semver, so `v1.2.3-rc1` still matches — but `vnext` and other
+    # stray v-tags no longer deploy production.
+    tags: [ 'v[0-9]*.[0-9]*.[0-9]*' ]
   workflow_dispatch:
     inputs:
       environment:
@@ -43,6 +46,19 @@ jobs:
       environment: ${{ steps.set-env.outputs.environment }}
       terraform_dir: ${{ steps.set-env.outputs.terraform_dir }}
     steps:
+      # The manual-dispatch ref picker defaults to main, and the environment
+      # dropdown is taken at face value below — so without this, dispatching
+      # `production` from main ships unreleased code to storywriter.net. Fail
+      # fast unless a release tag was picked as the ref.
+      - name: Require a release tag for production
+        if: >-
+          github.event_name == 'workflow_dispatch'
+          && inputs.environment == 'production'
+          && !(github.ref_type == 'tag' && startsWith(github.ref_name, 'v'))
+        run: |
+          echo "::error::Production deploys only run from v* release tags. Re-run the workflow and pick a release tag in the ref dropdown (it defaults to main)."
+          exit 1
+
       - name: Set environment variables
         id: set-env
         run: |
