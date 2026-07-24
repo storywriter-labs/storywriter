@@ -11,7 +11,7 @@ export default function WelcomeScreen() {
 
     return (
         <BackgroundImage opacity={0.4}>
-            <View style={styles.container}>
+            <View style={styles.container} testID="welcome-screen">
                 <View style={styles.card}>
                     <View style={styles.titleContainer}>
                         <Text style={styles.title}>Welcome to the</Text>
@@ -26,6 +26,7 @@ export default function WelcomeScreen() {
 
                     <TouchableOpacity
                         style={styles.button}
+                        testID="welcome-get-started"
                         onPress={() => router.push('/(auth)/terms')}
                     >
                         <Text style={styles.buttonText}>Try It Now!</Text>
@@ -33,6 +34,7 @@ export default function WelcomeScreen() {
 
                     <TouchableOpacity
                         style={styles.linkButton}
+                        testID="welcome-login-link"
                         onPress={() => router.push('/(auth)/login')}
                     >
                         <Text style={styles.linkText}>Already have an account? Log in</Text>

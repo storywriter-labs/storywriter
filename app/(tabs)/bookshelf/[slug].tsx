@@ -63,7 +63,7 @@ export default function StoryDetailScreen() {
 
     if (loading) {
         return (
-            <View style={styles.center}>
+            <View style={styles.center} testID="story-loading">
                 <ActivityIndicator size="large" color="#D35400" />
             </View>
         );
@@ -71,9 +71,9 @@ export default function StoryDetailScreen() {
 
     if (error || sections.length === 0) {
         return (
-            <View style={styles.center}>
+            <View style={styles.center} testID="story-error">
                 <Text style={styles.errorText}>{error || 'No content found.'}</Text>
-                <TouchableOpacity style={styles.backButton} onPress={() => router.push('/bookshelf')}>
+                <TouchableOpacity style={styles.backButton} testID="story-error-back" onPress={() => router.push('/bookshelf')}>
                     <Text style={styles.backButtonText}>Back to Bookshelf</Text>
                 </TouchableOpacity>
             </View>

@@ -30,13 +30,14 @@ export function NarrationControls({ onPlay, onPause, errorMessage, onRetry, show
     const isRateLimited = useNarrationStore(s => s.isRateLimited);
 
     return (
-        <View style={styles.container}>
+        <View style={styles.container} testID="narration-controls">
             {/* Error Message Display */}
             {errorMessage && (
-                <View style={styles.errorContainer}>
+                <View style={styles.errorContainer} testID="narration-error">
                     <Text style={styles.errorText}>{errorMessage}</Text>
                     {onRetry && (
                         <TouchableOpacity
+                            testID="narration-retry"
                             onPress={onRetry}
                             style={styles.retryButton}
                             accessible={true}
@@ -57,6 +58,7 @@ export function NarrationControls({ onPlay, onPause, errorMessage, onRetry, show
                 <ActivityIndicator size="small" color="#D35400" />
             ) : showTapToStart && !isNarrationPlaying ? (
                 <TouchableOpacity
+                    testID="narration-tap-to-start"
                     onPress={onTapToStart}
                     style={styles.tapToStartButton}
                     disabled={isRateLimited}
@@ -71,6 +73,7 @@ export function NarrationControls({ onPlay, onPause, errorMessage, onRetry, show
                 </TouchableOpacity>
             ) : (
                 <TouchableOpacity
+                    testID="narration-play-pause"
                     onPress={isNarrationPlaying ? onPause : onPlay}
                     style={styles.playPauseButton}
                     disabled={isLoadingAudio || isRateLimited}

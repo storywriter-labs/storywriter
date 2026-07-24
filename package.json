@@ -9,6 +9,9 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "test": "jest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report",
     "type-check": "tsc --noEmit",
     "type-check:watch": "tsc --noEmit --watch",
     "lint": "tsc --noEmit && expo lint",
@@ -86,6 +89,7 @@
     "jest-expo": "~55.0.19",
     "postcss": "^8.5.6",
     "react-test-renderer": "19.2.0",
+    "serve": "^14.2.4",
     "typescript": "~6.0.3"
   },
   "jest": {
@@ -98,7 +102,8 @@
     ],
     "testPathIgnorePatterns": [
       "<rootDir>/node_modules/",
-      "<rootDir>/.expo/"
+      "<rootDir>/.expo/",
+      "<rootDir>/e2e/"
     ],
     "collectCoverageFrom": [
       "**/*.{ts,tsx}",

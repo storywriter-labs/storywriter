@@ -41,6 +41,7 @@ export default function TabLayout() {
                 name="index"
                 options={{
                     title: 'The Lab',
+                    tabBarButtonTestID: 'tab-lab',
                     tabBarIcon: ({ color, size }) => (
                         <FontAwesome name="flask" size={size} color={color} />
                     ),
@@ -50,6 +51,7 @@ export default function TabLayout() {
                 name="bookshelf"
                 options={{
                     title: 'Bookshelf',
+                    tabBarButtonTestID: 'tab-bookshelf',
                     tabBarIcon: ({ color, size }) => (
                         <FontAwesome name="book" size={size} color={color} />
                     ),
@@ -59,6 +61,7 @@ export default function TabLayout() {
                 name="about"
                 options={{
                     title: 'About',
+                    tabBarButtonTestID: 'tab-about',
                     tabBarIcon: ({ color, size }) => (
                         <FontAwesome name="info-circle" size={size} color={color} />
                     ),

@@ -17,10 +17,10 @@ import { trackEvent, AnalyticsEvents } from '../../src/utils/analytics';
 import { Colors, Spacing, BorderRadius, FontSizes } from '../../constants/theme';
 
 // Helper to display errors clearly
-const ErrorMessage = ({ messages }: { messages: string[] }) => {
+const ErrorMessage = ({ messages, testID }: { messages: string[]; testID?: string }) => {
     if (!messages || messages.length === 0) return null;
     return (
-        <View style={styles.errorContainer}>
+        <View style={styles.errorContainer} testID={testID}>
             {messages.map((msg, index) => (
                 <Text key={index} style={styles.errorText}>
                     • {msg}
@@ -80,7 +80,7 @@ export default function LoginScreen() {
 
     return (
         <BackgroundImage opacity={0.4}>
-            <View style={styles.container}>
+            <View style={styles.container} testID="login-screen">
                 <View style={styles.card}>
                     <View style={styles.titleContainer}>
                         <Text style={styles.title}>Welcome to the</Text>
@@ -93,6 +93,7 @@ export default function LoginScreen() {
                     <View style={styles.formContainer}>
                         <TextInput
                             style={styles.input}
+                            testID="login-email"
                             placeholder="Parent's Email"
                             placeholderTextColor="#999"
                             value={email}
@@ -101,10 +102,11 @@ export default function LoginScreen() {
                             autoCapitalize="none"
                             editable={!isLoading}
                         />
-                        <ErrorMessage messages={errors.email} />
+                        <ErrorMessage messages={errors.email} testID="login-email-error" />
 
                         <TextInput
                             style={styles.input}
+                            testID="login-password"
                             placeholder="Password"
                             placeholderTextColor="#999"
                             value={password}
@@ -113,10 +115,11 @@ export default function LoginScreen() {
                             autoCapitalize="none"
                             editable={!isLoading}
                         />
-                        <ErrorMessage messages={errors.password} />
+                        <ErrorMessage messages={errors.password} testID="login-password-error" />
 
                         <TouchableOpacity
                             style={[styles.button, isLoading && styles.buttonDisabled]}
+                            testID="login-submit"
                             onPress={handleLogin}
                             disabled={isLoading}
                         >
@@ -127,6 +130,7 @@ export default function LoginScreen() {
 
                         <TouchableOpacity
                             style={styles.linkButton}
+                            testID="login-register-link"
                             onPress={() => router.push('/(auth)/welcome')}
                         >
                             <Text style={styles.infoText}>

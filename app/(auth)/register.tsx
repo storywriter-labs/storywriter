@@ -16,10 +16,10 @@ import BackgroundImage from '../../components/BackgroundImage/BackgroundImage';
 import { trackEvent, AnalyticsEvents } from '../../src/utils/analytics';
 import { Colors, Spacing, BorderRadius, FontSizes } from '../../constants/theme';
 
-const ErrorMessage = ({ messages }: { messages: string[] }) => {
+const ErrorMessage = ({ messages, testID }: { messages: string[]; testID?: string }) => {
     if (!messages || messages.length === 0) return null;
     return (
-        <View style={styles.errorContainer}>
+        <View style={styles.errorContainer} testID={testID}>
             {messages.map((msg, index) => (
                 <Text key={index} style={styles.errorText}>
                     • {msg}
@@ -96,7 +96,7 @@ export default function RegisterScreen() {
 
     return (
         <BackgroundImage opacity={0.4}>
-            <View style={styles.container}>
+            <View style={styles.container} testID="register-screen">
                 <View style={styles.card}>
                     <View style={styles.titleContainer}>
                         <Text style={styles.title}>Create your</Text>
@@ -107,6 +107,7 @@ export default function RegisterScreen() {
                     <View style={styles.formContainer}>
                         <TextInput
                             style={styles.input}
+                            testID="register-name"
                             placeholder="Your Name"
                             placeholderTextColor="#999"
                             value={name}
@@ -114,10 +115,11 @@ export default function RegisterScreen() {
                             autoCapitalize="words"
                             editable={!isLoading}
                         />
-                        <ErrorMessage messages={errors.name} />
+                        <ErrorMessage messages={errors.name} testID="register-name-error" />
 
                         <TextInput
                             style={styles.input}
+                            testID="register-email"
                             placeholder="Parent's Email"
                             placeholderTextColor="#999"
                             value={email}
@@ -126,10 +128,11 @@ export default function RegisterScreen() {
                             autoCapitalize="none"
                             editable={!isLoading}
                         />
-                        <ErrorMessage messages={errors.email} />
+                        <ErrorMessage messages={errors.email} testID="register-email-error" />
 
                         <TextInput
                             style={styles.input}
+                            testID="register-password"
                             placeholder="Password"
                             placeholderTextColor="#999"
                             value={password}
@@ -141,6 +144,7 @@ export default function RegisterScreen() {
 
                         <TextInput
                             style={styles.input}
+                            testID="register-password-confirmation"
                             placeholder="Confirm Password"
                             placeholderTextColor="#999"
                             value={passwordConfirmation}
@@ -149,10 +153,11 @@ export default function RegisterScreen() {
                             autoCapitalize="none"
                             editable={!isLoading}
                         />
-                        <ErrorMessage messages={errors.password} />
+                        <ErrorMessage messages={errors.password} testID="register-password-error" />
 
                         <TouchableOpacity
                             style={[styles.button, isLoading && styles.buttonDisabled]}
+                            testID="register-submit"
                             onPress={handleRegister}
                             disabled={isLoading}
                         >
@@ -163,6 +168,7 @@ export default function RegisterScreen() {
 
                         <TouchableOpacity
                             style={styles.linkButton}
+                            testID="register-login-link"
                             onPress={() => router.push('/(auth)/login')}
                         >
                             <Text style={styles.linkText}>Already have an account? Log in</Text>
