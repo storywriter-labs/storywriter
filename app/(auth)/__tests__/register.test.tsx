@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import RegisterScreen from '../register';
 
@@ -53,5 +53,53 @@ describe('RegisterScreen terms gate', () => {
 
         expect(getByPlaceholderText('Your Name')).toBeTruthy();
         expect(mockReplace).not.toHaveBeenCalled();
+    });
+});
+
+describe('RegisterScreen failure feedback', () => {
+    // Same bug as the login screen: these branches called Alert.alert, which
+    // does nothing on react-native-web, so registration failed silently.
+    beforeEach(() => {
+        mockParams = { termsAccepted: '1' };
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
+    it('shows an inline message when the server errors', async () => {
+        mockRegister.mockRejectedValue({ response: { status: 500, data: {} } });
+
+        const { getByText, getByTestId } = render(<RegisterScreen />);
+        fireEvent.press(getByText('Create Account'));
+
+        await waitFor(() => expect(getByTestId('register-form-error')).toBeTruthy());
+        expect(getByText(/Something went wrong on our end/)).toBeTruthy();
+    });
+
+    it('shows an inline message when the request never reaches the server', async () => {
+        mockRegister.mockRejectedValue(new Error('Network Error'));
+
+        const { getByText, getByTestId } = render(<RegisterScreen />);
+        fireEvent.press(getByText('Create Account'));
+
+        await waitFor(() => expect(getByTestId('register-form-error')).toBeTruthy());
+        expect(getByText(/couldn't reach StoryWriter/)).toBeTruthy();
+    });
+
+    it('still renders field errors for a 422 and no form-level message', async () => {
+        mockRegister.mockRejectedValue({
+            response: {
+                status: 422,
+                data: { errors: { email: ['That email is already taken.'] } },
+            },
+        });
+
+        const { getByText, queryByTestId } = render(<RegisterScreen />);
+        fireEvent.press(getByText('Create Account'));
+
+        await waitFor(() => expect(getByText(/already taken/)).toBeTruthy());
+        expect(queryByTestId('register-form-error')).toBeNull();
     });
 });
