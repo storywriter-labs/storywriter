@@ -16,6 +16,10 @@ export const AnalyticsEvents = {
   LOGIN_STARTED: 'login_started',
   LOGIN_COMPLETED: 'login_completed',
   LOGIN_FAILED: 'login_failed',
+  REGISTER_STARTED: 'register_started',
+  REGISTER_COMPLETED: 'register_completed',
+  REGISTER_FAILED: 'register_failed',
+  TERMS_ACCEPTED: 'terms_accepted',
 
   // Story creation funnel
   STORY_CREATION_STARTED: 'story_creation_started',

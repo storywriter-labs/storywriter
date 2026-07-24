@@ -1,6 +1,6 @@
-// app/(auth)/login.tsx
+// app/(auth)/register.tsx
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     View,
     Text,
@@ -10,13 +10,12 @@ import {
     Platform,
     Alert
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../src/context/AuthContext';
 import BackgroundImage from '../../components/BackgroundImage/BackgroundImage';
 import { trackEvent, AnalyticsEvents } from '../../src/utils/analytics';
 import { Colors, Spacing, BorderRadius, FontSizes } from '../../constants/theme';
 
-// Helper to display errors clearly
 const ErrorMessage = ({ messages }: { messages: string[] }) => {
     if (!messages || messages.length === 0) return null;
     return (
@@ -30,27 +29,41 @@ const ErrorMessage = ({ messages }: { messages: string[] }) => {
     );
 };
 
-export default function LoginScreen() {
-    const { login } = useAuth();
+export default function RegisterScreen() {
+    const { register } = useAuth();
     const router = useRouter();
 
-    // Form State
+    // Registration stamps terms_accepted_at on the account, so it's the record
+    // that a parent agreed to the terms. Reaching this screen without passing
+    // through the terms screen — a deep link, or going Back after accepting —
+    // must not produce that record, so send them to accept first.
+    const { termsAccepted } = useLocalSearchParams<{ termsAccepted?: string }>();
+    const hasAcceptedTerms = termsAccepted === '1';
+
+    useEffect(() => {
+        if (!hasAcceptedTerms) {
+            router.replace('/(auth)/terms');
+        }
+    }, [hasAcceptedTerms, router]);
+
+    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [passwordConfirmation, setPasswordConfirmation] = useState('');
 
-    // UI State
     const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState<{ [key: string]: string[] }>({});
 
-    const handleLogin = async () => {
+    const handleRegister = async () => {
         setIsLoading(true);
         setErrors({});
-        trackEvent(AnalyticsEvents.LOGIN_STARTED, { platform: Platform.OS });
+        trackEvent(AnalyticsEvents.REGISTER_STARTED, { platform: Platform.OS });
 
         try {
-            await login(email, password);
+            await register(name, email, password, passwordConfirmation, hasAcceptedTerms);
+            trackEvent(AnalyticsEvents.REGISTER_COMPLETED);
         } catch (error: unknown) {
-            console.error("Login Error:", error);
+            console.error("Registration Error:", error);
 
             let errorType = 'unknown';
             if (error && typeof error === 'object' && 'response' in error) {
@@ -72,25 +85,37 @@ export default function LoginScreen() {
                     'Please check your connection and try again.'
                 );
             }
-            trackEvent(AnalyticsEvents.LOGIN_FAILED, { error_type: errorType });
+            trackEvent(AnalyticsEvents.REGISTER_FAILED, { error_type: errorType });
         } finally {
             setIsLoading(false);
         }
     };
+
+    // Don't flash the form on the way to the terms screen.
+    if (!hasAcceptedTerms) return null;
 
     return (
         <BackgroundImage opacity={0.4}>
             <View style={styles.container}>
                 <View style={styles.card}>
                     <View style={styles.titleContainer}>
-                        <Text style={styles.title}>Welcome to the</Text>
-                        <Text style={styles.labTitle}>StoryWriter Lab!</Text>
+                        <Text style={styles.title}>Create your</Text>
+                        <Text style={styles.labTitle}>StoryWriter Account</Text>
                         <View style={styles.decorativeLine} />
                     </View>
 
-                    <Text style={styles.subtitle}>Let's get you started on your adventure!</Text>
-
                     <View style={styles.formContainer}>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Your Name"
+                            placeholderTextColor="#999"
+                            value={name}
+                            onChangeText={setName}
+                            autoCapitalize="words"
+                            editable={!isLoading}
+                        />
+                        <ErrorMessage messages={errors.name} />
+
                         <TextInput
                             style={styles.input}
                             placeholder="Parent's Email"
@@ -113,25 +138,34 @@ export default function LoginScreen() {
                             autoCapitalize="none"
                             editable={!isLoading}
                         />
+
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Confirm Password"
+                            placeholderTextColor="#999"
+                            value={passwordConfirmation}
+                            onChangeText={setPasswordConfirmation}
+                            secureTextEntry
+                            autoCapitalize="none"
+                            editable={!isLoading}
+                        />
                         <ErrorMessage messages={errors.password} />
 
                         <TouchableOpacity
                             style={[styles.button, isLoading && styles.buttonDisabled]}
-                            onPress={handleLogin}
+                            onPress={handleRegister}
                             disabled={isLoading}
                         >
                             <Text style={styles.buttonText}>
-                                {isLoading ? 'Getting Ready...' : 'Enter the Lab!'}
+                                {isLoading ? 'Creating Account...' : 'Create Account'}
                             </Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
                             style={styles.linkButton}
-                            onPress={() => router.push('/(auth)/welcome')}
+                            onPress={() => router.push('/(auth)/login')}
                         >
-                            <Text style={styles.infoText}>
-                                New here? Create an account
-                            </Text>
+                            <Text style={styles.linkText}>Already have an account? Log in</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -172,7 +206,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     labTitle: {
-        fontSize: FontSizes.giant,
+        fontSize: FontSizes.huge,
         fontWeight: 'bold',
         color: Colors.coral,
         textAlign: 'center',
@@ -187,13 +221,6 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.yellow,
         borderRadius: 2,
         marginTop: Spacing.md,
-    },
-    subtitle: {
-        fontSize: FontSizes.lg,
-        color: Colors.darkGray,
-        marginBottom: Spacing.lg,
-        textAlign: 'center',
-        fontWeight: '500',
     },
     formContainer: {
         width: '100%',
@@ -248,15 +275,13 @@ const styles = StyleSheet.create({
         fontWeight: '500',
         marginLeft: Spacing.sm,
     },
-    infoText: {
+    linkButton: {
         marginTop: Spacing.lg,
-        textAlign: 'center',
+        alignItems: 'center',
+    },
+    linkText: {
         fontSize: FontSizes.xs,
         color: '#888',
-        fontStyle: 'italic',
         textDecorationLine: 'underline',
-    },
-    linkButton: {
-        alignItems: 'center',
     },
 });

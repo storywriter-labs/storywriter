@@ -17,7 +17,8 @@ interface AuthContextType {
     isAuthenticated: boolean;
     loading: boolean;
     loadingError: 'network' | 'auth' | null;
-    login: (email: string, name: string, deviceName: string) => Promise<void>;
+    login: (email: string, password: string) => Promise<void>;
+    register: (name: string, email: string, password: string, passwordConfirmation: string, termsAccepted: boolean) => Promise<void>;
     logout: () => Promise<void>;
     retryLoadUser: () => Promise<void>;
 }
@@ -25,7 +26,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-    const [user, setUser] = useState(null);
+    const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [loadingError, setLoadingError] = useState<'network' | 'auth' | null>(null);
 
@@ -121,24 +122,45 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         performLoadUser().catch(console.error);
     }, [performLoadUser]);
 
-    const login = async (email: string, name: string, device_name: string) => {
-        const response = await client.post('/login', {
+    const applySession = (token: string, userData: User) => {
+        if (!token) throw new Error("No token received!");
+        return tokenStorage.set(token).then(() => {
+            client.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            setUser(userData);
+            identifyUser(userData, Platform.OS);
+        });
+    };
+
+    const login = async (email: string, password: string) => {
+        const response = await client.post('/auth/login', {
             email,
-            name,
-            device_name
+            password,
         });
 
-        logger.debug(LogCategory.SYSTEM, 'Login response', { response: response.data });
+        // Deliberately not logging response.data — it carries the bearer token.
+        logger.debug(LogCategory.SYSTEM, 'Login succeeded', { userId: response.data.user?.id });
 
-        const token = response.data.token;
-        const userData = response.data.user;
+        await applySession(response.data.token, response.data.user);
+    };
 
-        if (!token) throw new Error("No token received!");
-        await tokenStorage.set(token);
-        client.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    const register = async (
+        name: string,
+        email: string,
+        password: string,
+        passwordConfirmation: string,
+        termsAccepted: boolean,
+    ) => {
+        const response = await client.post('/auth/register', {
+            name,
+            email,
+            password,
+            password_confirmation: passwordConfirmation,
+            terms_accepted: termsAccepted,
+        });
 
-        setUser(userData);
-        identifyUser(userData, Platform.OS);
+        logger.debug(LogCategory.SYSTEM, 'Registration succeeded', { userId: response.data.user?.id });
+
+        await applySession(response.data.token, response.data.user);
     };
 
     return (
@@ -146,6 +168,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             user,
             isAuthenticated: !!user,
             login,
+            register,
             logout: logoutUser,
             loading,
             loadingError,
