@@ -27,7 +27,7 @@ export default function TermsScreen() {
 
     const handleContinue = () => {
         trackEvent(AnalyticsEvents.TERMS_ACCEPTED);
-        router.push('/(auth)/register');
+        router.push('/(auth)/register?termsAccepted=1');
     };
 
     return (

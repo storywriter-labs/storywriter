@@ -1,6 +1,6 @@
 // app/(auth)/register.tsx
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     View,
     Text,
@@ -10,7 +10,7 @@ import {
     Platform,
     Alert
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../src/context/AuthContext';
 import BackgroundImage from '../../components/BackgroundImage/BackgroundImage';
 import { trackEvent, AnalyticsEvents } from '../../src/utils/analytics';
@@ -33,6 +33,19 @@ export default function RegisterScreen() {
     const { register } = useAuth();
     const router = useRouter();
 
+    // Registration stamps terms_accepted_at on the account, so it's the record
+    // that a parent agreed to the terms. Reaching this screen without passing
+    // through the terms screen — a deep link, or going Back after accepting —
+    // must not produce that record, so send them to accept first.
+    const { termsAccepted } = useLocalSearchParams<{ termsAccepted?: string }>();
+    const hasAcceptedTerms = termsAccepted === '1';
+
+    useEffect(() => {
+        if (!hasAcceptedTerms) {
+            router.replace('/(auth)/terms');
+        }
+    }, [hasAcceptedTerms, router]);
+
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -47,7 +60,7 @@ export default function RegisterScreen() {
         trackEvent(AnalyticsEvents.REGISTER_STARTED, { platform: Platform.OS });
 
         try {
-            await register(name, email, password, passwordConfirmation);
+            await register(name, email, password, passwordConfirmation, hasAcceptedTerms);
             trackEvent(AnalyticsEvents.REGISTER_COMPLETED);
         } catch (error: unknown) {
             console.error("Registration Error:", error);
@@ -77,6 +90,9 @@ export default function RegisterScreen() {
             setIsLoading(false);
         }
     };
+
+    // Don't flash the form on the way to the terms screen.
+    if (!hasAcceptedTerms) return null;
 
     return (
         <BackgroundImage opacity={0.4}>

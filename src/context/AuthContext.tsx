@@ -18,7 +18,7 @@ interface AuthContextType {
     loading: boolean;
     loadingError: 'network' | 'auth' | null;
     login: (email: string, password: string) => Promise<void>;
-    register: (name: string, email: string, password: string, passwordConfirmation: string) => Promise<void>;
+    register: (name: string, email: string, password: string, passwordConfirmation: string, termsAccepted: boolean) => Promise<void>;
     logout: () => Promise<void>;
     retryLoadUser: () => Promise<void>;
 }
@@ -137,21 +137,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             password,
         });
 
-        logger.debug(LogCategory.SYSTEM, 'Login response', { response: response.data });
+        // Deliberately not logging response.data — it carries the bearer token.
+        logger.debug(LogCategory.SYSTEM, 'Login succeeded', { userId: response.data.user?.id });
 
         await applySession(response.data.token, response.data.user);
     };
 
-    const register = async (name: string, email: string, password: string, passwordConfirmation: string) => {
+    const register = async (
+        name: string,
+        email: string,
+        password: string,
+        passwordConfirmation: string,
+        termsAccepted: boolean,
+    ) => {
         const response = await client.post('/auth/register', {
             name,
             email,
             password,
             password_confirmation: passwordConfirmation,
-            terms_accepted: true,
+            terms_accepted: termsAccepted,
         });
 
-        logger.debug(LogCategory.SYSTEM, 'Register response', { response: response.data });
+        logger.debug(LogCategory.SYSTEM, 'Registration succeeded', { userId: response.data.user?.id });
 
         await applySession(response.data.token, response.data.user);
     };
