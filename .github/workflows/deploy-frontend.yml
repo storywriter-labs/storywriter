@@ -290,6 +290,9 @@ jobs:
             fi
           fi
           echo "Building with API_BASE_URL: $API_BASE_URL"
+          if [ -z "$POSTHOG_API_KEY" ] || [ "$POSTHOG_API_KEY" = "null" ]; then
+            echo "⚠️  POSTHOG_API_KEY not set for this environment — analytics will be disabled in this build"
+          fi
           npx expo export --platform web --output-dir dist
           
       - name: Validate build output

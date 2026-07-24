@@ -5,12 +5,17 @@
  * All frontend analytics calls go through this module.
  */
 import PostHog from 'posthog-react-native';
+import { Platform } from 'react-native';
 
 // ---------------------------------------------------------------------------
 // Event name constants
 // ---------------------------------------------------------------------------
 
 export const AnalyticsEvents = {
+  // Screen / page views (PostHog reserved names — see trackScreenView)
+  PAGEVIEW: '$pageview',
+  SCREEN: '$screen',
+
   // Auth
   APP_OPENED: 'app_opened',
   LOGIN_STARTED: 'login_started',
@@ -90,6 +95,31 @@ export function trackEvent(
   } catch {
     // Silently ignore analytics failures — never break the app
   }
+}
+
+/**
+ * Track a screen / page view for the given router path.
+ *
+ * PostHog's web dashboards — and the "complete your installation" check that
+ * waits for a first event — key off `$pageview`, while native sessions are
+ * reported as `$screen`. posthog-react-native fills in neither for us here:
+ * its `captureScreens` autocapture cannot see expo-router navigation (Expo
+ * Router never exposes the NavigationContainer), and on web it does not set
+ * the URL properties a `$pageview` needs, so we send both explicitly.
+ */
+export function trackScreenView(pathname: string): void {
+  if (Platform.OS !== 'web') {
+    trackEvent(AnalyticsEvents.SCREEN, { $screen_name: pathname });
+    return;
+  }
+
+  const location = typeof window !== 'undefined' ? window.location : undefined;
+  trackEvent(AnalyticsEvents.PAGEVIEW, {
+    $current_url: location?.href ?? pathname,
+    $host: location?.host ?? null,
+    $pathname: pathname,
+    $screen_name: pathname,
+  });
 }
 
 /**

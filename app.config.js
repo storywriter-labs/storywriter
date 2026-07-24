@@ -92,6 +92,8 @@ export default ({ config }) => ({
       // PostHog Analytics
       POSTHOG_API_KEY: process.env.POSTHOG_API_KEY || '',
       POSTHOG_HOST: process.env.POSTHOG_HOST || 'https://us.i.posthog.com',
+      // Analytics are production-only; set this locally to verify events reach PostHog
+      POSTHOG_FORCE_ENABLE: process.env.POSTHOG_FORCE_ENABLE === 'true',
 
       // Alternative AI Services (Available for Future Use)
       HUGGING_FACE_API_KEY: process.env.HUGGING_FACE_API_KEY,
