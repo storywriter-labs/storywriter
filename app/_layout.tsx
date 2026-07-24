@@ -12,11 +12,13 @@ import PostHog, { PostHogProvider, usePostHog } from 'posthog-react-native';
 
 // import BackendConnectivityService from '@/src/utils/backendConnectivity';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
+import { useScreenTracking } from '../src/hooks/useScreenTracking';
 import { setPostHogClient, trackEvent, AnalyticsEvents } from '../src/utils/analytics';
 
 const posthogApiKey = Constants.expoConfig?.extra?.POSTHOG_API_KEY ?? '';
 const posthogHost = Constants.expoConfig?.extra?.POSTHOG_HOST ?? 'https://us.i.posthog.com';
 const appEnv = Constants.expoConfig?.extra?.environment ?? 'development';
+const posthogForceEnable = Constants.expoConfig?.extra?.POSTHOG_FORCE_ENABLE === true;
 
 export {
   ErrorBoundary,
@@ -66,7 +68,8 @@ export default function RootLayout() {
  */
 function PostHogProviderWrapper({ children }: { children: React.ReactNode }) {
   const client = useMemo(() => {
-    if (typeof window === 'undefined' || !posthogApiKey || appEnv !== 'production') {
+    const enabled = appEnv === 'production' || posthogForceEnable;
+    if (typeof window === 'undefined' || !posthogApiKey || !enabled) {
       return null;
     }
 
@@ -116,6 +119,9 @@ function RootLayoutNav() {
   // 2. SETUP THE TRAFFIC COP HOOKS
   const segments = useSegments();
   const router = useRouter();
+
+  // Report every route change to PostHog ($pageview on web, $screen on native)
+  useScreenTracking();
 
   useEffect(() => {
     if (Platform.OS !== 'web') {
