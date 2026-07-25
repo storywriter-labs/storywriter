@@ -1,14 +1,14 @@
 import { renderHook, act } from '@testing-library/react-native';
 import ElevenLabsService from '@/services/elevenLabsService';
-import { useErrorHandler } from '@/src/hooks/useErrorHandler';
 import { TranscriptProcessor } from '@/src/utils/transcriptProcessor';
 import { createNarrationPlayer } from '@/services/narration';
 import { extractAudioFromMessage } from '@/services/narration/audioDecoder';
-import { useConversation } from '../useConversation';
+import { useErrorStore } from '@/src/stores/errorStore';
+import { ChildFriendlyErrors } from '@/src/utils/errorHandler';
+import { useConversation, CONVERSATION_ERROR_KEY } from '../useConversation';
 
 // Mock dependencies BEFORE importing useConversation
 jest.mock('@/services/elevenLabsService');
-jest.mock('@/src/hooks/useErrorHandler');
 jest.mock('@/src/utils/transcriptProcessor');
 jest.mock('@/src/utils/analytics');
 jest.mock('@/services/narration/audioDecoder');
@@ -26,6 +26,7 @@ let mockStoreConfig = {
   phase: 'IDLE',
   startConversation: jest.fn(),
   endConversation: jest.fn(),
+  resetConversation: jest.fn(),
 };
 
 // conversation store with configurable behavior
@@ -34,6 +35,7 @@ jest.mock('@/src/stores/conversationStore', () => ({
     phase: string;
     startConversation: jest.Mock;
     endConversation: jest.Mock;
+    resetConversation: jest.Mock;
   }) => unknown) => {
     return selector(mockStoreConfig);
   }),
@@ -48,6 +50,7 @@ describe('useConversation', () => {
       phase: overrides.phase ?? 'IDLE',
       startConversation: overrides.startConversation ?? jest.fn(),
       endConversation: overrides.endConversation ?? jest.fn(),
+      resetConversation: overrides.resetConversation ?? jest.fn(),
     };
   };
 
@@ -57,6 +60,9 @@ describe('useConversation', () => {
 
     // Reset store config to defaults
     setStoreConfig();
+
+    // The conversation error is shared state; start each test with none
+    useErrorStore.setState({ errors: {} });
 
     // Reset story store mock
     mockGenerateStoryAutomatically = jest.fn().mockResolvedValue(undefined);
@@ -70,11 +76,6 @@ describe('useConversation', () => {
     mockNarrationPlayer = jest.fn().mockResolvedValue(undefined);
     (createNarrationPlayer as jest.Mock).mockReturnValue({
       playOnce: mockNarrationPlayer,
-    });
-
-    // Mock error handler
-    (useErrorHandler as jest.Mock).mockReturnValue({
-      handleError: jest.fn(),
     });
 
     // Mock transcript processor
@@ -132,14 +133,13 @@ describe('useConversation', () => {
       expect(mockStartConversationAgent).toHaveBeenCalledTimes(1);
     });
 
-    it('should handle connection errors gracefully', async () => {
-      const error = new Error('Connection failed');
-      mockStartConversationAgent.mockRejectedValue(error);
+    // --- Card #87: a failed conversation has to be visible ------------------
+    // These used to pass with the error going nowhere but Alert.alert, which is
+    // an empty function on the web build. Now it lands in the shared error
+    // store, which is what the UI renders from.
 
-      const mockHandleError = jest.fn();
-      (useErrorHandler as jest.Mock).mockReturnValue({
-        handleError: mockHandleError,
-      });
+    it('files a child-friendly error when the conversation fails to start', async () => {
+      mockStartConversationAgent.mockRejectedValue(new Error('Connection failed'));
 
       const { result } = renderHook(() => useConversation());
 
@@ -147,7 +147,66 @@ describe('useConversation', () => {
         result.current.startConversation();
       });
 
-      expect(mockHandleError).toHaveBeenCalled();
+      const error = useErrorStore.getState().getError(CONVERSATION_ERROR_KEY);
+      expect(error).toBeDefined();
+      expect(error?.message).toBe('Connection failed');
+      expect(ChildFriendlyErrors.conversation).toContain(error?.userMessage);
+    });
+
+    it('drops the conversation back to idle when starting fails', async () => {
+      mockStartConversationAgent.mockRejectedValue(new Error('Connection failed'));
+
+      const { result } = renderHook(() => useConversation());
+
+      await act(async () => {
+        result.current.startConversation();
+      });
+
+      // Without this the screen keeps showing "Listening..." for a conversation
+      // that never connected, and the retry button is a no-op.
+      expect(mockStoreConfig.resetConversation).toHaveBeenCalled();
+    });
+
+    it('files an error and resets when the session reports one mid-connect', async () => {
+      const mockSession = { endSession: jest.fn().mockResolvedValue(undefined) };
+      mockStartConversationAgent.mockResolvedValue(mockSession);
+
+      const { result } = renderHook(() => useConversation());
+
+      await act(async () => {
+        result.current.startConversation();
+      });
+
+      const { onError } = mockStartConversationAgent.mock.calls[0][0];
+
+      act(() => {
+        onError(new Error('WebSocket closed'));
+      });
+
+      expect(useErrorStore.getState().getError(CONVERSATION_ERROR_KEY)).toBeDefined();
+      expect(mockStoreConfig.resetConversation).toHaveBeenCalled();
+      expect(result.current.isConnecting).toBe(false);
+    });
+
+    it('clears a previous error when the kid tries again', async () => {
+      mockStartConversationAgent.mockRejectedValue(new Error('Connection failed'));
+
+      const { result } = renderHook(() => useConversation());
+
+      await act(async () => {
+        result.current.startConversation();
+      });
+      expect(useErrorStore.getState().getError(CONVERSATION_ERROR_KEY)).toBeDefined();
+
+      mockStartConversationAgent.mockResolvedValue({
+        endSession: jest.fn().mockResolvedValue(undefined),
+      });
+
+      await act(async () => {
+        result.current.startConversation();
+      });
+
+      expect(useErrorStore.getState().getError(CONVERSATION_ERROR_KEY)).toBeUndefined();
     });
   });
 

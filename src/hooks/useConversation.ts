@@ -3,8 +3,8 @@ import ElevenLabsService from '@/services/elevenLabsService';
 import { ConversationSession, ConversationMessage as ElevenLabsMessage } from '@/types/elevenlabs';
 import { useConversationStore } from '@/src/stores/conversationStore';
 import { useStoryStore } from '@/src/stores/storyStore';
-import { useErrorHandler } from '@/src/hooks/useErrorHandler';
-import { ErrorType, ErrorSeverity } from '@/src/utils/errorHandler';
+import { useErrorStore } from '@/src/stores/errorStore';
+import { ErrorHandler, ErrorType, ErrorSeverity, ChildFriendlyErrors } from '@/src/utils/errorHandler';
 import { conversationLogger, logger, LogCategory } from '@/src/utils/logger';
 import { TranscriptProcessor } from '@/src/utils/transcriptProcessor';
 import { trackEvent, AnalyticsEvents } from '@/src/utils/analytics';
@@ -16,6 +16,32 @@ export interface ConversationMessage {
   content: string;
   timestamp: number;
 }
+
+/**
+ * Key the conversation failure is filed under in the shared error store, the
+ * same way story generation files 'story_generation'. Components read it from
+ * there — the failure used to go to Alert.alert, which is an empty function on
+ * the web build, so a kid whose conversation dropped out saw nothing (#87).
+ */
+export const CONVERSATION_ERROR_KEY = 'conversation';
+
+/**
+ * Puts a conversation failure somewhere the UI can find it. The message a kid
+ * ends up reading is the child-friendly wording, not the raw provider error.
+ */
+const reportConversationError = (error: unknown, context: Record<string, unknown>) => {
+  const appError = ErrorHandler.fromUnknown(
+    error,
+    ErrorType.CONVERSATION,
+    ErrorSeverity.MEDIUM,
+    context
+  );
+
+  useErrorStore.getState().addError(CONVERSATION_ERROR_KEY, {
+    ...appError,
+    userMessage: ChildFriendlyErrors.getRandomMessage('conversation'),
+  });
+};
 
 export interface UseConversationReturn {
   startConversation: () => void;
@@ -43,12 +69,8 @@ export const useConversation = (): UseConversationReturn => {
   const storeStartConversation = useConversationStore(s => s.startConversation);
   const storeEndConversation = useConversationStore(s => s.endConversation);
   const setConversationId = useConversationStore(s => s.setConversationId);
+  const resetConversation = useConversationStore(s => s.resetConversation);
   const generateStoryAutomatically = useStoryStore(s => s.generateStoryAutomatically);
-
-  const { handleError } = useErrorHandler({
-    showAlert: true,
-    useChildFriendlyMessages: true
-  });
 
   const isConversationActive = phase === 'ACTIVE';
 
@@ -84,9 +106,15 @@ export const useConversation = (): UseConversationReturn => {
       try {
         await conversationSession.endSession();
       } catch (error) {
-        handleError(error, ErrorType.CONVERSATION, ErrorSeverity.LOW, {
-          action: 'end_conversation'
-        });
+        // Log only, on purpose: we already have the transcript and are about to
+        // generate the story, so a failed hang-up is nothing the kid can act on
+        // and nothing they should be interrupted about.
+        ErrorHandler.handleError(ErrorHandler.fromUnknown(
+          error,
+          ErrorType.CONVERSATION,
+          ErrorSeverity.LOW,
+          { action: 'end_conversation' }
+        ));
       }
     }
 
@@ -96,7 +124,7 @@ export const useConversation = (): UseConversationReturn => {
     setTimeout(() => {
       void generateStoryAutomatically(finalTranscript);
     }, 500);
-  }, [conversationSession, handleError, storeEndConversation, generateStoryAutomatically]);
+  }, [conversationSession, storeEndConversation, generateStoryAutomatically]);
 
   // Validate and process transcript
   const processTranscriptAndEnd = useCallback(() => {
@@ -147,6 +175,7 @@ export const useConversation = (): UseConversationReturn => {
     if (isConnecting || isConversationActive) return;
 
     setIsConnecting(true);
+    useErrorStore.getState().removeError(CONVERSATION_ERROR_KEY);
     storeStartConversation();
     conversationStartTimeRef.current = Date.now();
 
@@ -284,12 +313,14 @@ export const useConversation = (): UseConversationReturn => {
         onError: (error) => {
           setIsConnecting(false);
           setConversationSession(null);
+          // The session is gone, so drop the phase back to IDLE. Left on ACTIVE
+          // the screen keeps showing the mic and "Listening..." for a
+          // conversation that isn't there, and the retry below is a no-op.
+          resetConversation();
           trackEvent(AnalyticsEvents.CONVERSATION_CONNECTION_FAILED, {
             error_message: error instanceof Error ? error.message : String(error),
           });
-          handleError(error, ErrorType.CONVERSATION, ErrorSeverity.MEDIUM, {
-            action: 'conversation_connection'
-          });
+          reportConversationError(error, { action: 'conversation_connection' });
         },
       });
 
@@ -307,9 +338,8 @@ export const useConversation = (): UseConversationReturn => {
       }
     } catch (error) {
       setIsConnecting(false);
-      handleError(error, ErrorType.CONVERSATION, ErrorSeverity.MEDIUM, {
-        action: 'start_conversation'
-      });
+      resetConversation();
+      reportConversationError(error, { action: 'start_conversation' });
     }
   };
 
