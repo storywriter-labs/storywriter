@@ -8,6 +8,7 @@ import { createNarrationPlayer } from '@/services/narration';
 import elevenLabsService from '@/services/elevenLabsService';
 import audioCache from '@/services/narration/audioCache';
 import storyGenerationService from '@/services/storyGenerationService';
+import { trackEvent } from '@/src/utils/analytics';
 
 // ---------------------------------------------------------------------------
 // Component tests for BookReader auto-play wiring (Fizzy card #39).
@@ -66,6 +67,7 @@ jest.mock('@/src/utils/analytics', () => ({
 }));
 
 const generateSpeechMock = elevenLabsService.generateSpeech as jest.Mock;
+const trackEventMock = trackEvent as jest.Mock;
 const createNarrationPlayerMock = createNarrationPlayer as jest.Mock;
 
 /** The single NarrationPlayer instance BookReader created this render, if any. */
@@ -260,5 +262,84 @@ describe('BookReader – bookshelf reader does not share the creation story slic
             expect(useStoryStore.getState().story.sections[0].imageUrl).toBe('https://example.com/fox.png');
         });
         expect(generatePageImageMock).toHaveBeenCalledWith(7, 1);
+    });
+});
+
+describe('BookReader – analytics report the real backend story id (card #92)', () => {
+    /** Properties of the first tracked event with the given name. */
+    const propsOf = (event: string) =>
+        trackEventMock.mock.calls.find(([name]) => name === event)?.[1];
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        audioCache.clear();
+        mockIsFocused = true;
+        seedStory();
+        resetNarration();
+    });
+
+    afterEach(() => {
+        cleanup();
+    });
+
+    it('sends the saved story id as story_id, keeping the per-mount value under reading_session_id', async () => {
+        useStoryStore.setState({
+            story: { content: null, sections: SECTIONS, storyId: 7, name: 'The Brave Fox' },
+        });
+
+        render(<BookReader onBack={jest.fn()} />);
+
+        await waitFor(() => {
+            expect(currentPlayer().play).toHaveBeenCalledTimes(1);
+        });
+
+        expect(propsOf('STORY_OPENED')).toEqual(
+            expect.objectContaining({ story_id: 7, reading_session_id: expect.stringMatching(/^story-\d+$/) })
+        );
+        expect(propsOf('NARRATION_PLAYED')).toEqual(
+            expect.objectContaining({ story_id: 7, reading_session_id: expect.stringMatching(/^story-\d+$/) })
+        );
+    });
+
+    it('uses the storyId prop in the props-driven bookshelf reader', async () => {
+        render(<BookReader sections={SECTIONS} storyId={42} onBack={jest.fn()} />);
+
+        await waitFor(() => {
+            expect(currentPlayer().play).toHaveBeenCalledTimes(1);
+        });
+
+        expect(propsOf('STORY_OPENED')).toEqual(expect.objectContaining({ story_id: 42 }));
+        expect(propsOf('NARRATION_PLAYED')).toEqual(expect.objectContaining({ story_id: 42 }));
+    });
+
+    it('sends null rather than a fabricated id for a story that has not been saved yet', async () => {
+        // seedStory() leaves storyId null — the mid-generation preview case.
+        render(<BookReader onBack={jest.fn()} />);
+
+        await waitFor(() => {
+            expect(currentPlayer().play).toHaveBeenCalledTimes(1);
+        });
+
+        expect(propsOf('STORY_OPENED')).toEqual(expect.objectContaining({ story_id: null }));
+        expect(propsOf('NARRATION_PLAYED')).toEqual(expect.objectContaining({ story_id: null }));
+    });
+
+    it('reports the real story id on pause too', async () => {
+        useStoryStore.setState({
+            story: { content: null, sections: SECTIONS, storyId: 7, name: 'The Brave Fox' },
+        });
+
+        render(<BookReader onBack={jest.fn()} />);
+
+        await waitFor(() => {
+            expect(currentPlayer().play).toHaveBeenCalledTimes(1);
+        });
+
+        fireEvent.press(screen.getByLabelText('Pause narration'));
+
+        await waitFor(() => {
+            expect(propsOf('NARRATION_PAUSED')).toBeDefined();
+        });
+        expect(propsOf('NARRATION_PAUSED')).toEqual(expect.objectContaining({ story_id: 7 }));
     });
 });
