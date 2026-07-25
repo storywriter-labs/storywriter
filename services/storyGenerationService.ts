@@ -72,7 +72,41 @@ class StoryGenerationService {
     }
 
     // ------------------------------------------------------------
-    // 5. FAIL RESPONSE
+    // 5. GENERATE PAGE AUDIO (on-demand, idempotent server-side)
+    // ------------------------------------------------------------
+    // The backend narrates the page text it holds, stores the mp3 once, and
+    // replays the stored file on later calls — so unlike the direct-TTS path
+    // this doesn't re-bill ElevenLabs on every replay. Errors propagate (with
+    // the HTTP status attached) so callers can tell a 429 from a real failure.
+    async generatePageAudio(storyId: number, pageNumber: number): Promise<Uint8Array> {
+        logger.debug(LogCategory.STORY_GENERATION, `POST /stories/${storyId}/pages/${pageNumber}/audio`);
+
+        try {
+            const response = await client.post(
+                `/stories/${storyId}/pages/${pageNumber}/audio`,
+                {},
+                {
+                    responseType: 'arraybuffer',
+                    headers: { Accept: 'audio/mpeg' },
+                }
+            );
+
+            return new Uint8Array(response.data);
+        } catch (error: any) {
+            const status = error?.response?.status;
+            console.error(`Page audio generation failed (story=${storyId}, page=${pageNumber}):`, error.message);
+
+            const audioError: Error & { status?: number } = new Error(error.message ?? 'Failed to generate page audio');
+            if (typeof status === 'number') {
+                audioError.status = status;
+            }
+            audioError.name = error.name ?? audioError.name;
+            throw audioError;
+        }
+    }
+
+    // ------------------------------------------------------------
+    // 6. FAIL RESPONSE
     // ------------------------------------------------------------
     private failResponse(errorMsg: string): StoryGenerationResult {
         return {
