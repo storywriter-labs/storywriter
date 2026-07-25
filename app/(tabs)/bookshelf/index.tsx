@@ -100,7 +100,7 @@ export default function BookshelfScreen() {
     if (loading) {
         return (
             <Layout>
-                <View style={styles.center}>
+                <View style={styles.center} testID="bookshelf-loading">
                     <ActivityIndicator size="large" color="#D35400" />
                 </View>
             </Layout>
@@ -111,9 +111,9 @@ export default function BookshelfScreen() {
     if (error) {
         return (
             <Layout>
-                <View style={styles.center}>
+                <View style={styles.center} testID="bookshelf-error">
                     <Text style={styles.errorText}>{error}</Text>
-                    <TouchableOpacity style={styles.retryButton} onPress={fetchStories}>
+                    <TouchableOpacity style={styles.retryButton} testID="bookshelf-retry" onPress={fetchStories}>
                         <Text style={styles.retryButtonText}>Try Again</Text>
                     </TouchableOpacity>
                 </View>
@@ -126,7 +126,7 @@ export default function BookshelfScreen() {
         return (
             <Layout>
                 <View style={styles.center}>
-                    <View style={styles.emptyCard}>
+                    <View style={styles.emptyCard} testID="bookshelf-empty">
                         <Ionicons name="book-outline" size={FontSizes.massive} color={Colors.coral} style={styles.emptyIcon} />
                         <Text style={styles.emptyTitle}>No Stories Yet</Text>
                         <Text style={styles.emptyText}>
@@ -147,6 +147,7 @@ export default function BookshelfScreen() {
                 resizeMode="cover"
             >
                 <ScrollView
+                    testID="bookshelf-list"
                     style={styles.scrollView}
                     contentContainerStyle={styles.scrollContent}
                     showsVerticalScrollIndicator={false}
@@ -165,6 +166,7 @@ export default function BookshelfScreen() {
                             return (
                             <TouchableOpacity
                                 key={story.id}
+                                testID={`bookshelf-card-${story.slug}`}
                                 style={[
                                     styles.card,
                                     { width: cardWidth },
@@ -192,7 +194,7 @@ export default function BookshelfScreen() {
 
                         {/* Title, date, preview */}
                         <View style={styles.cardContent}>
-                            <Text style={styles.cardTitle} numberOfLines={2}>
+                            <Text style={styles.cardTitle} testID="bookshelf-card-title" numberOfLines={2}>
                                 {story.name}
                             </Text>
                             <Text style={styles.cardDate}>{formatDate(story.created_at)}</Text>

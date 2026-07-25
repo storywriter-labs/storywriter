@@ -32,7 +32,7 @@ export default function TermsScreen() {
 
     return (
         <BackgroundImage opacity={0.4}>
-            <View style={styles.container}>
+            <View style={styles.container} testID="terms-screen">
                 <View style={styles.card}>
                     <Text style={styles.title}>Just one thing first...</Text>
 
@@ -42,6 +42,7 @@ export default function TermsScreen() {
 
                     <TouchableOpacity
                         style={styles.checkboxRow}
+                        testID="terms-agree-checkbox"
                         onPress={() => setAgreed(!agreed)}
                         accessibilityRole="checkbox"
                         accessibilityState={{ checked: agreed }}
@@ -56,6 +57,7 @@ export default function TermsScreen() {
 
                     <TouchableOpacity
                         style={[styles.button, !agreed && styles.buttonDisabled]}
+                        testID="terms-continue"
                         onPress={handleContinue}
                         disabled={!agreed}
                     >

@@ -8,6 +8,55 @@ This is for entertainment purposes and to encourage a love of books and storytel
 
 https://storywriter.net
 
+## Tests
+
+`npm test` runs the Jest unit tests. `npm run test:e2e` runs the Playwright
+end-to-end tests, which drive the real app in a browser.
+
+### End-to-end tests
+
+The E2E suite lives in `e2e/` and runs against the Expo **web** build in
+Chromium at a tablet-landscape viewport, since that's the shape the app is
+designed for.
+
+**There is no backend involved.** Every call the app makes goes to
+`/api/v1/...` through `src/api/client.js`, and `e2e/fixtures/api-mock.ts`
+intercepts that whole prefix with `page.route`. So the tests need no Laravel
+server, no database, and no Together AI or ElevenLabs keys — and they can't
+run up an AI bill. Any endpoint without a mock gets a 501 back, which shows up
+in `api.unhandled` so a missed one fails loudly instead of silently reaching
+for a real server.
+
+```bash
+npm run test:e2e            # headless, against the Expo dev server
+npm run test:e2e:ui         # Playwright's watch UI
+npm run test:e2e:report     # open the last HTML report
+```
+
+Locally the tests boot `expo start --web`; on CI they run against the static
+`expo export` output — the same artifact the deploy workflow ships — so the
+build that gets tested is the build that goes live. First run needs the browser:
+
+```bash
+npx playwright install --with-deps chromium
+```
+
+Writing a test:
+
+```ts
+import { test, expect } from './fixtures/test';
+
+test('the bookshelf shows a story', async ({ signedInPage, api }) => {
+  api.get('/stories', { json: { data: [] } });   // override any default
+  await signedInPage.getByTestId('tab-bookshelf').click();
+  await expect(signedInPage.getByTestId('bookshelf-empty')).toBeVisible();
+});
+```
+
+Screens are addressed by `testID` (react-native-web renders these as
+`data-testid`, so `getByTestId` just works). Prefer adding a `testID` to a new
+element over matching its text — copy changes, test IDs don't.
+
 ## Releases & deployment
 
 Deploys are driven by [`deploy-frontend.yml`](.github/workflows/deploy-frontend.yml)

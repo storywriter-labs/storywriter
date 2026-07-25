@@ -158,7 +158,7 @@ function RootLayoutNav() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={styles.loadingContainer} testID="app-loading">
         <ActivityIndicator size="large" />
       </View>
     );
@@ -167,13 +167,14 @@ function RootLayoutNav() {
   if (loadingError === 'network') {
     return (
       <View style={styles.loadingContainer}>
-        <View style={styles.errorContainer}>
+        <View style={styles.errorContainer} testID="boot-network-error">
           <Text style={styles.errorTitle}>Can't reach StoryWriter</Text>
           <Text style={styles.errorMessage}>
             Please check your internet connection and try again.
           </Text>
           <TouchableOpacity
             style={styles.retryButton}
+            testID="boot-retry"
             onPress={async () => {
               await retryLoadUser();
             }}

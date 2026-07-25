@@ -40,7 +40,7 @@ const StoryScreen = () => {
   if (story.content) {
     return (
       <Layout>
-        <View style={s.container}>
+        <View style={s.container} testID="lab-screen">
           {isFocused && <StoryContent />}
         </View>
       </Layout>
@@ -51,7 +51,7 @@ const StoryScreen = () => {
   return (
     <Layout>
       <BackgroundImage opacity={0.6}>
-        <View style={s.container}>
+        <View style={s.container} testID="lab-screen">
           {currentPhase === 'GENERATING' ? (
             <ErrorBoundary>
               <StoryGenerationSplash

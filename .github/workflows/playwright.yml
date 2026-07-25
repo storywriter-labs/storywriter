@@ -1,0 +1,65 @@
+name: E2E Tests
+
+# Playwright end-to-end tests against the static web build.
+#
+# The backend is mocked entirely in the browser (see e2e/fixtures/api-mock.ts),
+# so this job needs no Laravel server, no database, and no AI provider keys.
+#
+# SECURITY: like PR Tests, this DOES run PR-authored code, which is safe only
+# because it runs on `pull_request` with NO secrets and a read-only token. Do
+# not add secrets or write permissions here.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '24'
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      # Third-party actions are pinned to a commit SHA (tags are mutable). Comments note the version.
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        # Only chromium — see the `projects` list in playwright.config.ts.
+        run: npx playwright install --with-deps chromium
+
+      # The same `expo export` the deploy workflow runs, so the tests exercise
+      # the artifact that actually ships rather than a dev-server bundle.
+      - name: Build the web app
+        run: npm run build:web
+
+      - name: Run Playwright tests
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14

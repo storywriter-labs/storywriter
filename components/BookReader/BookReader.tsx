@@ -636,10 +636,10 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
     const currentPage = pages[currentIndex];
 
     return (
-        <View style={styles.container} {...panResponder.panHandlers}>
+        <View style={styles.container} testID="book-reader" {...panResponder.panHandlers}>
             <View style={styles.pageWrapper}>
                 {isEndPage ? (
-                    <View style={styles.endPageContainer}>
+                    <View style={styles.endPageContainer} testID="book-end-page">
                         <Text style={styles.endTitle}>The End!</Text>
                         <Text style={styles.endSubtitle}>What would you like to do?</Text>
 
@@ -647,6 +647,7 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
                             <>
                                 <TouchableOpacity
                                     style={[styles.endButton, styles.primaryButton]}
+                                    testID="book-read-again"
                                     onPress={handleRestartStory}
                                 >
                                     <View style={styles.endButtonContent}>
@@ -657,6 +658,7 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
 
                                 <TouchableOpacity
                                     style={[styles.endButton, styles.secondaryButton]}
+                                    testID="book-end-back-to-bookshelf"
                                     onPress={() => {
                                         trackEvent(AnalyticsEvents.STORY_END_ACTION, { action: 'back_to_bookshelf' });
                                         onBack?.();
@@ -672,6 +674,7 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
                             <>
                                 <TouchableOpacity
                                     style={[styles.endButton, styles.primaryButton]}
+                                    testID="book-create-new-story"
                                     onPress={handleNewStory}
                                 >
                                     <View style={styles.endButtonContent}>
@@ -682,6 +685,7 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
 
                                 <TouchableOpacity
                                     style={[styles.endButton, styles.secondaryButton]}
+                                    testID="book-read-again"
                                     onPress={handleRestartStory}
                                 >
                                     <View style={styles.endButtonContent}>
@@ -692,6 +696,7 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
 
                                 <TouchableOpacity
                                     style={[styles.endButton, styles.tertiaryButton]}
+                                    testID="book-exit"
                                     onPress={handleExit}
                                 >
                                     <View style={styles.endButtonContent}>
@@ -704,7 +709,7 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
                     </View>
                 ) : (
                     <>
-                        <Text style={styles.pageNumber}>
+                        <Text style={styles.pageNumber} testID="book-page-number">
                             Page {currentIndex + 1} of {pages.length}
                         </Text>
 
@@ -715,7 +720,7 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
                         >
 
                             {currentIndex === 0 && (
-                                <Text style={styles.storyName}>{name || story.name || ''}</Text>
+                                <Text style={styles.storyName} testID="book-story-name">{name || story.name || ''}</Text>
                             )}
 
                             {isLoadingImage && !currentPage.imageUrl ? (
@@ -728,7 +733,7 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
                                 />
                             ) : null}
 
-                            <Text style={styles.storyText}>
+                            <Text style={styles.storyText} testID="book-page-text">
 
                                 {currentPage.text || currentPage.text}
                             </Text>
@@ -741,6 +746,7 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
             {!isEndPage && (
                 <View style={styles.navigationRow}>
                     <TouchableOpacity
+                        testID="book-prev-page"
                         onPress={goPrev}
                         style={[styles.navButton, currentIndex === 0 && styles.disabledBtn]}
                         disabled={currentIndex === 0}
@@ -757,6 +763,7 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
                     </View>
 
                     <TouchableOpacity
+                        testID="book-next-page"
                         onPress={goNext}
                         style={[styles.navButton, isEndPage && styles.disabledBtn]}
                         disabled={isEndPage}
@@ -782,7 +789,7 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
 
             {/* BACK TO BOOKSHELF */}
             {onBack && !isEndPage && (
-                <TouchableOpacity style={styles.backToBookshelfBtn} onPress={onBack}>
+                <TouchableOpacity style={styles.backToBookshelfBtn} testID="book-back-to-bookshelf" onPress={onBack}>
                     <Text style={styles.backToBookshelfBtnText}>‹ Bookshelf</Text>
                 </TouchableOpacity>
             )}
@@ -790,6 +797,7 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
             {/* CLOSE BUTTON */}
             <TouchableOpacity
                 style={styles.closeButton}
+                testID="book-close"
                 onPress={handleClose}
                 accessibilityLabel="Close story"
                 accessibilityRole="button"
