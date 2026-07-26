@@ -125,6 +125,9 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
 
     const isEndPage = currentIndex === pages.length;
     const playerRef = useRef<NarrationPlayer | null>(null);
+    // Stand-in id for a story that hasn't been saved yet (mid-generation
+    // preview). Only used where there's no real backend id to key on —
+    // effectiveStoryId wins whenever it exists.
     const storyIdRef = useRef<string>(`story-${Date.now()}`);
     const readingStartTimeRef = useRef<number>(Date.now());
     const hasTrackedOpenRef = useRef(false);
@@ -142,6 +145,10 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
         }
     }, [autoAdvancePages, currentIndex, pages.length, setNarrationPlaying]);
 
+    // Key the in-memory audio cache on the real backend story id so entries
+    // survive a remount and can't be shared between two different stories.
+    const audioCacheStoryId = effectiveStoryId ?? storyIdRef.current;
+
     // --- AUDIO GENERATION ---
     // Returns true when audio is loaded into the player and ready to play.
     const generateAndLoadAudio = useCallback(async (pageIndex: number, pageText: string): Promise<boolean> => {
@@ -149,7 +156,7 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
             return false;
         }
 
-        const cacheKey = `${storyIdRef.current}-${pageIndex}`;
+        const cacheKey = `${audioCacheStoryId}-${pageIndex}`;
 
         try {
             setLoadingAudio(true);
@@ -170,32 +177,38 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
                 return true;
             }
 
-            // Generate new audio
-            const result = await elevenLabsService.generateSpeech(
-                pageText,
-                undefined, // Use default voice
-                {
-                    model_id: "eleven_flash_v2_5"
-                }
-            );
+            // Generate new audio. Once the story is saved we ask the backend to
+            // narrate the page it already holds — it stores the mp3 the first
+            // time and replays the stored file after that, so a re-read costs
+            // nothing. Before there's a story id (mid-generation preview) fall
+            // back to direct TTS on the text we have in hand.
+            const audio = effectiveStoryId
+                ? await storyGenerationService.generatePageAudio(effectiveStoryId, pageIndex + 1)
+                : (await elevenLabsService.generateSpeech(
+                    pageText,
+                    undefined, // Use default voice
+                    {
+                        model_id: "eleven_flash_v2_5"
+                    }
+                )).audio;
 
             // Validate audio format
-            if (!(result.audio instanceof Uint8Array)) {
+            if (!(audio instanceof Uint8Array)) {
                 throw new Error('INVALID_AUDIO_FORMAT');
             }
 
             // Validate audio data (check if it's not empty and has reasonable size)
-            if (result.audio.length === 0) {
+            if (audio.length === 0) {
                 throw new Error('INVALID_AUDIO_EMPTY');
             }
 
             // Check for minimum valid MP3 size (at least a few hundred bytes)
-            if (result.audio.length < 100) {
+            if (audio.length < 100) {
                 throw new Error('INVALID_AUDIO_TOO_SMALL');
             }
 
             // Store in cache
-            audioCache.set(cacheKey, result.audio);
+            audioCache.set(cacheKey, audio);
 
             // Load into player
             if (!playerRef.current) {
@@ -203,7 +216,7 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
                     onPlaybackComplete: handlePlaybackComplete
                 });
             }
-            await playerRef.current.load(result.audio);
+            await playerRef.current.load(audio);
             setLoadingAudio(false);
             return true;
         } catch (error) {
@@ -267,7 +280,7 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
             setLoadingAudio(false);
             return false;
         }
-    }, [isNarrationEnabled, isRateLimited, setLoadingAudio, setRateLimited, handlePlaybackComplete]);
+    }, [isNarrationEnabled, isRateLimited, setLoadingAudio, setRateLimited, handlePlaybackComplete, audioCacheStoryId, effectiveStoryId]);
 
     // Low-level: play whatever audio is currently loaded in the player.
     // Read isLoadingAudio via getState() rather than subscribing: this keeps the
@@ -425,13 +438,13 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
         const currentPage = pages[currentIndex];
         if (currentPage && currentPage.text) {
             // Clear any cached data for this page to force regeneration
-            const cacheKey = `${storyIdRef.current}-${currentIndex}`;
+            const cacheKey = `${audioCacheStoryId}-${currentIndex}`;
             audioCache.delete(cacheKey);
 
             // Regenerate audio
             void generateAndLoadAudio(currentIndex, currentPage.text);
         }
-    }, [currentIndex, pages, generateAndLoadAudio]);
+    }, [currentIndex, pages, generateAndLoadAudio, audioCacheStoryId]);
 
     const goNext = useCallback(() => {
         // Stop current audio when navigating, but keep the auto-play preference
