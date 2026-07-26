@@ -297,8 +297,13 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
             setNarrationPlaying(true);
             setAudioError(null);
             setAutoplayBlocked(false);
+            // story_id is the backend story id, so narration events can be
+            // joined to a story — null until the story has been saved.
+            // storyIdRef is a per-mount value that identifies one reading
+            // session and nothing else, so it rides along under its own name.
             trackEvent(AnalyticsEvents.NARRATION_PLAYED, {
-                story_id: storyIdRef.current,
+                story_id: effectiveStoryId,
+                reading_session_id: storyIdRef.current,
                 page_index: currentIndex,
             });
         } catch (error) {
@@ -311,7 +316,8 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
                 setAudioError(null);
                 setCanRetry(false);
                 trackEvent(AnalyticsEvents.NARRATION_AUTOPLAY_BLOCKED, {
-                    story_id: storyIdRef.current,
+                    story_id: effectiveStoryId,
+                    reading_session_id: storyIdRef.current,
                     page_index: currentIndex,
                 });
                 return;
@@ -322,7 +328,8 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
                 LogCategory.AUDIO,
                 'Audio playback failed',
                 {
-                    storyId: storyIdRef.current,
+                    storyId: effectiveStoryId,
+                    readingSessionId: storyIdRef.current,
                     pageIndex: currentIndex,
                     error: error instanceof Error ? {
                         name: error.name,
@@ -351,7 +358,7 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
                 playerRef.current = null;
             }
         }
-    }, [setNarrationPlaying, currentIndex]);
+    }, [setNarrationPlaying, currentIndex, effectiveStoryId]);
 
     // User pressed Play: (re)enable the auto-play preference, generate audio for
     // the current page if it wasn't pre-loaded (because auto-play was off), then
@@ -392,7 +399,8 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
                 LogCategory.AUDIO,
                 'Audio pause failed',
                 {
-                    storyId: storyIdRef.current,
+                    storyId: effectiveStoryId,
+                    readingSessionId: storyIdRef.current,
                     pageIndex: currentIndex,
                     error: error instanceof Error ? {
                         name: error.name,
@@ -419,7 +427,7 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
                 playerRef.current = null;
             }
         }
-    }, [setNarrationPlaying, currentIndex]);
+    }, [setNarrationPlaying, currentIndex, effectiveStoryId]);
 
     // User pressed Pause: opt out of auto-play (persisted) so no further TTS is
     // generated on subsequent pages until they press Play again, then stop.
@@ -427,10 +435,11 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
         setAutoPlayEnabled(false);
         await stopPlayback();
         trackEvent(AnalyticsEvents.NARRATION_PAUSED, {
-            story_id: storyIdRef.current,
+            story_id: effectiveStoryId,
+            reading_session_id: storyIdRef.current,
             page_index: currentIndex,
         });
-    }, [setAutoPlayEnabled, stopPlayback, currentIndex]);
+    }, [setAutoPlayEnabled, stopPlayback, currentIndex, effectiveStoryId]);
 
     const handleRetry = useCallback(() => {
         trackEvent(AnalyticsEvents.NARRATION_RETRIED, { page_index: currentIndex });
@@ -590,11 +599,12 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
             readingStartTimeRef.current = Date.now();
             trackEvent(AnalyticsEvents.STORY_OPENED, {
                 source: onBack ? 'bookshelf' : 'new_generation',
-                story_id: storyIdRef.current,
+                story_id: effectiveStoryId,
+                reading_session_id: storyIdRef.current,
                 page_count: pages.length,
             });
         }
-    }, [onBack, pages.length]);
+    }, [onBack, pages.length, effectiveStoryId]);
 
     // Cleanup player on unmount
     useEffect(() => {

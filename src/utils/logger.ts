@@ -41,7 +41,8 @@ export interface LogContext {
   userId?: string;
   sessionId?: string;
   conversationId?: string;
-  storyId?: string;
+  // The backend story id is numeric, and null until the story has been saved.
+  storyId?: string | number | null;
   action?: string;
   phase?: string;
 }
