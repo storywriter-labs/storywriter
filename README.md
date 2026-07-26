@@ -27,6 +27,15 @@ run up an AI bill. Any endpoint without a mock gets a 501 back, which shows up
 in `api.unhandled` so a missed one fails loudly instead of silently reaching
 for a real server.
 
+The mocks are installed for every test whether or not it names the `api`
+fixture, so a spec can't accidentally reach a real host.
+
+| Spec | Covers |
+|---|---|
+| `e2e/foundation.spec.ts` | that the harness itself works |
+| `e2e/auth.spec.ts` | welcome, login, the terms gate, registration |
+| `e2e/routing.spec.ts` | session boot (spinner, 401, offline, retry), tabs, not-found |
+
 ```bash
 npm run test:e2e            # headless, against the Expo dev server
 npm run test:e2e:ui         # Playwright's watch UI
