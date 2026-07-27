@@ -49,11 +49,14 @@ jest.mock('@/services/elevenLabsService', () => ({
     },
 }));
 
-// No lazy image generation in these tests.
+// No lazy image generation in these tests. Once a story has a backend id,
+// BookReader narrates it through generatePageAudio rather than direct TTS, so
+// that has to be stubbed too or the saved-story tests get a TypeError.
 jest.mock('@/services/storyGenerationService', () => ({
     __esModule: true,
     default: {
         generatePageImage: jest.fn(() => Promise.resolve(null)),
+        generatePageAudio: jest.fn(() => Promise.resolve(new Uint8Array(200))),
     },
 }));
 
