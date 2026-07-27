@@ -26,6 +26,7 @@ interface ApiStory {
     body: string;
     prompt: string;
     created_at: string;
+    coverImageUrl?: string | null;
 }
 
 interface StoryCard {
@@ -74,7 +75,10 @@ export default function BookshelfScreen() {
                 const { sections, coverImageUrl } = parseStoryBody(story.body);
                 return {
                     story,
-                    coverImageUrl,
+                    // Covers come from the API now, signed and good for a while.
+                    // Legacy: older stories have the cover pasted into the body
+                    // instead, so fall back to digging it out of there.
+                    coverImageUrl: story.coverImageUrl ?? coverImageUrl,
                     preview: sections.length > 0 ? sections[0].text : '',
                 };
             });
