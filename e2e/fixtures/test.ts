@@ -47,11 +47,20 @@ interface WorkerFixtures {
 export const test = base.extend<Fixtures, WorkerFixtures>({
   apiOptions: [{}, { option: true, scope: 'worker' }],
 
-  api: async ({ page, apiOptions }, use) => {
-    const api = applyDefaults(new ApiMock(page), apiOptions);
-    await api.install();
-    await use(api);
-  },
+  /**
+   * `auto` so the mocks go up even for a test that never names the fixture —
+   * otherwise forgetting it means the test quietly talks to whatever is (or
+   * isn't) listening on the real API host, and fails with a boot error that
+   * looks nothing like the missing mock it actually is.
+   */
+  api: [
+    async ({ page, apiOptions }, use) => {
+      const api = applyDefaults(new ApiMock(page), apiOptions);
+      await api.install();
+      await use(api);
+    },
+    { auto: true },
+  ],
 
   signedInPage: async ({ page, api }, use) => {
     // Nothing should have reached the API before we navigate — if it has, the

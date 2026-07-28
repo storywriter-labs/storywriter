@@ -6,7 +6,7 @@ import { Colors, Spacing, BorderRadius, FontSizes } from '../../constants/theme'
 export default function AboutScreen() {
   return (
     <Layout>
-      <View style={styles.container}>
+      <View style={styles.container} testID="about-screen">
         <View style={styles.card}>
           <View style={styles.titleContainer}>
             <Text style={styles.title}>About StoryWriter</Text>
