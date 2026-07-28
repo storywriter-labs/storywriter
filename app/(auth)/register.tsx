@@ -7,8 +7,7 @@ import {
     TextInput,
     TouchableOpacity,
     StyleSheet,
-    Platform,
-    Alert
+    Platform
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../src/context/AuthContext';
@@ -19,7 +18,7 @@ import { Colors, Spacing, BorderRadius, FontSizes } from '../../constants/theme'
 const ErrorMessage = ({ messages, testID }: { messages: string[]; testID?: string }) => {
     if (!messages || messages.length === 0) return null;
     return (
-        <View style={styles.errorContainer} testID={testID}>
+        <View style={styles.errorContainer} testID={testID} accessibilityRole="alert">
             {messages.map((msg, index) => (
                 <Text key={index} style={styles.errorText}>
                     • {msg}
@@ -28,6 +27,14 @@ const ErrorMessage = ({ messages, testID }: { messages: string[]; testID?: strin
         </View>
     );
 };
+
+// Shown when the request never got as far as a validation response — a 5xx, or
+// no response at all. react-native-web's Alert is a no-op, so anything routed
+// through Alert.alert here would leave the parent staring at an unchanged form.
+const SERVER_ERROR_MESSAGE =
+    "Something went wrong on our end. Please try again in a moment.";
+const NETWORK_ERROR_MESSAGE =
+    "We couldn't reach StoryWriter. Please check your connection and try again.";
 
 export default function RegisterScreen() {
     const { register } = useAuth();
@@ -53,10 +60,12 @@ export default function RegisterScreen() {
 
     const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState<{ [key: string]: string[] }>({});
+    const [formError, setFormError] = useState<string | null>(null);
 
     const handleRegister = async () => {
         setIsLoading(true);
         setErrors({});
+        setFormError(null);
         trackEvent(AnalyticsEvents.REGISTER_STARTED, { platform: Platform.OS });
 
         try {
@@ -73,17 +82,11 @@ export default function RegisterScreen() {
                     setErrors(axiosError.response.data.errors);
                 } else {
                     errorType = 'server';
-                    Alert.alert(
-                        'Oops! Something went wrong',
-                        'Please check your connection and try again.'
-                    );
+                    setFormError(SERVER_ERROR_MESSAGE);
                 }
             } else {
                 errorType = 'network';
-                Alert.alert(
-                    'Oops! Something went wrong',
-                    'Please check your connection and try again.'
-                );
+                setFormError(NETWORK_ERROR_MESSAGE);
             }
             trackEvent(AnalyticsEvents.REGISTER_FAILED, { error_type: errorType });
         } finally {
@@ -154,6 +157,11 @@ export default function RegisterScreen() {
                             editable={!isLoading}
                         />
                         <ErrorMessage messages={errors.password} testID="register-password-error" />
+
+                        <ErrorMessage
+                            messages={formError ? [formError] : []}
+                            testID="register-form-error"
+                        />
 
                         <TouchableOpacity
                             style={[styles.button, isLoading && styles.buttonDisabled]}
