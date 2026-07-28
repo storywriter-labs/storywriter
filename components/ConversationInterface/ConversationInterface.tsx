@@ -4,9 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useConversationStore } from '@/src/stores/conversationStore';
 import { useStoryStore } from '@/src/stores/storyStore';
+import { useErrorStore } from '@/src/stores/errorStore';
 import { logger } from '@/src/utils/logger';
 import AudioVisualizer from '@/components/AudioVisualizer/AudioVisualizer';
-import { useConversation } from '@/src/hooks/useConversation';
+import { useConversation, CONVERSATION_ERROR_KEY } from '@/src/hooks/useConversation';
 import { getRandomPresetTranscript } from '@/src/constants/presetTranscripts';
 import { styles } from './ConversationInterface.style';
 
@@ -23,6 +24,7 @@ const ConversationInterface = forwardRef<ConversationInterfaceRef, Props>(({ dis
   const phase = useConversationStore(s => s.phase);
   const storeEndConversation = useConversationStore(s => s.endConversation);
   const generateStoryAutomatically = useStoryStore(s => s.generateStoryAutomatically);
+  const conversationError = useErrorStore(s => s.errors[CONVERSATION_ERROR_KEY]);
   const { startConversation, skipConversation, currentSpeaker, isConnecting, isActive } = useConversation();
 
   // Expose startConversation to parent via ref
@@ -57,14 +59,32 @@ Agent: That's such a wonderful and heartwarming idea! I think we have everything
     }, 500);
   }, [disabled, storeEndConversation, generateStoryAutomatically]);
 
-  // Don't render the card at all when buttons are hidden and no active conversation
-  if (hideButtons && !isActive && phase !== 'GENERATING') {
+  // Don't render the card at all when buttons are hidden and no active
+  // conversation — unless a conversation just failed, which is the one thing
+  // the kid has to be told about.
+  if (hideButtons && !isActive && phase !== 'GENERATING' && !conversationError) {
     return null;
   }
 
   return (
     <View style={styles.container}>
       <View style={styles.card}>
+        {/* Conversation failed: say so, and offer the way back in */}
+        {conversationError && (
+          <View style={styles.errorContainer} accessibilityRole="alert" testID="conversation-error">
+            <Ionicons name="happy-outline" size={40} color={Colors.coral} />
+            <Text style={styles.errorText}>{conversationError.userMessage}</Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={startConversation}
+              disabled={disabled || isConnecting}
+              testID="conversation-error-retry"
+            >
+              <Text style={styles.retryButtonText}>Let&apos;s try again!</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {!hideButtons && (
           <>
             {/* Main Conversation Button */}

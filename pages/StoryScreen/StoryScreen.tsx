@@ -4,6 +4,8 @@ import { useIsFocused } from '@react-navigation/native';
 import Layout from '../../components/Layout/Layout';
 import { useConversationStore, ConversationPhase } from '@/src/stores/conversationStore';
 import { useStoryStore } from '@/src/stores/storyStore';
+import { useErrorStore } from '@/src/stores/errorStore';
+import { CONVERSATION_ERROR_KEY } from '@/src/hooks/useConversation';
 import StoryContent from '@/components/StoryContent/StoryContent';
 import ConversationInterface, { ConversationInterfaceRef } from '@/components/ConversationInterface/ConversationInterface';
 import StoryGenerationSplash from '@/components/StoryGenerationSplash/StoryGenerationSplash';
@@ -18,12 +20,16 @@ const StoryScreen = () => {
   const story = useStoryStore(s => s.story);
   const phase = useConversationStore(s => s.phase);
   const isGenerating = useStoryStore(s => s.isGenerating);
+  const conversationError = useErrorStore(s => s.errors[CONVERSATION_ERROR_KEY]);
 
   const conversationRef = useRef<ConversationInterfaceRef>(null);
   const currentPhase: ConversationPhase = phase;
 
-  // Show welcome overlay when IDLE, user hasn't started, AND screen is focused
-  const showWelcome = isFocused && currentPhase === 'IDLE' && !story.content;
+  // Show welcome overlay when IDLE, user hasn't started, AND screen is focused.
+  // Stand it down while a conversation error is up: the overlay fills the
+  // screen, so on web it swallows taps meant for the "Let's try again!" button
+  // underneath it, and the kid gets stuck (#87).
+  const showWelcome = isFocused && currentPhase === 'IDLE' && !story.content && !conversationError;
 
   const handleStart = () => {
     trackEvent(AnalyticsEvents.STORY_CREATION_STARTED, { entry_point: 'welcome_overlay' });

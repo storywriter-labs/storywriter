@@ -5,18 +5,17 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
-import { Alert } from 'react-native';
 import { ErrorHandler, ErrorType, ErrorSeverity, AppError, ChildFriendlyErrors } from '@/src/utils/errorHandler';
 
 export interface ErrorState {
   error: AppError | null;
+  /** The text to put in front of the user — child-friendly when configured. */
+  message: string | null;
   hasError: boolean;
   isRecoverable: boolean;
 }
 
 export interface ErrorHandlerOptions {
-  showAlert?: boolean;
-  alertTitle?: string;
   useChildFriendlyMessages?: boolean;
   onError?: (error: AppError) => void;
   autoReset?: boolean;
@@ -25,11 +24,13 @@ export interface ErrorHandlerOptions {
 
 /**
  * Hook for handling errors in components
+ *
+ * The message is kept in state for a component to render. It deliberately does
+ * not pop an Alert: react-native-web's Alert is an empty function, so anything
+ * routed through it is invisible on the web build (Fizzy #86, #87).
  */
 export function useErrorHandler(options: ErrorHandlerOptions = {}) {
   const {
-    showAlert = true,
-    alertTitle = 'Error',
     useChildFriendlyMessages = false,
     onError,
     autoReset = false,
@@ -38,6 +39,7 @@ export function useErrorHandler(options: ErrorHandlerOptions = {}) {
 
   const [errorState, setErrorState] = useState<ErrorState>({
     error: null,
+    message: null,
     hasError: false,
     isRecoverable: true
   });
@@ -71,18 +73,12 @@ export function useErrorHandler(options: ErrorHandlerOptions = {}) {
     // Update state
     setErrorState({
       error: appError,
+      message: useChildFriendlyMessages
+        ? getChildFriendlyMessage(appError.type)
+        : appError.userMessage,
       hasError: true,
       isRecoverable: severity !== ErrorSeverity.CRITICAL
     });
-
-    // Show alert if configured
-    if (showAlert) {
-      const message = useChildFriendlyMessages 
-        ? getChildFriendlyMessage(appError.type)
-        : appError.userMessage;
-      
-      Alert.alert(alertTitle, message, [{ text: 'OK' }]);
-    }
 
     // Call custom error handler if provided
     onError?.(appError);
@@ -97,11 +93,12 @@ export function useErrorHandler(options: ErrorHandlerOptions = {}) {
       }, resetTimeout);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showAlert, alertTitle, useChildFriendlyMessages, getChildFriendlyMessage, onError, autoReset, resetTimeout]);
+  }, [useChildFriendlyMessages, getChildFriendlyMessage, onError, autoReset, resetTimeout]);
 
   const clearError = useCallback(() => {
     setErrorState({
       error: null,
+      message: null,
       hasError: false,
       isRecoverable: true
     });
