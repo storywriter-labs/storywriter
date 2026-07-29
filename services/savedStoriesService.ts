@@ -53,15 +53,10 @@ class SavedStoriesService {
     }
   }
 
-  async unsaveStory(storyId: number): Promise<void> {
-    try {
-      logger.debug(LogCategory.STORY_GENERATION, `Unsaving story ${storyId} from backend`);
-      await client.delete(`/stories/${storyId}/unsave`);
-    } catch (error: any) {
-      logger.error(LogCategory.STORY_GENERATION, `Failed to unsave story ${storyId}`, { error: error.message });
-      throw error;
-    }
-  }
+  // There is no unsaveStory here on purpose. Nothing in the app ever called it,
+  // so it sat unused carrying the same id-for-slug bug as saveStory. The
+  // DELETE /stories/{story}/unsave endpoint is still there for whenever the
+  // bookshelf grows a way to take a story off the shelf.
 }
 
 export default new SavedStoriesService();
