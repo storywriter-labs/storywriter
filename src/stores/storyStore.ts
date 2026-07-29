@@ -58,6 +58,11 @@ export interface SavedStory {
   elevenLabsConversationId?: string | null;
 }
 
+/**
+ * Error-store key for a story that saved to the tablet but not to the backend.
+ */
+export const BACKEND_SAVE_ERROR_KEY = 'story_backend_save';
+
 export interface StoryState {
   // --- Story generation ---
   isGenerating: boolean;
@@ -312,10 +317,17 @@ const useStoryStore = create<StoryState>()(
             try {
               await SavedStoriesService.saveStory(story.storyId, elevenLabsConversationId);
               logger.debug(LogCategory.STORY_GENERATION, `Story ${story.storyId} saved to backend`);
+              useErrorStore.getState().removeError(BACKEND_SAVE_ERROR_KEY);
             } catch (backendError) {
-              const msg = backendError instanceof Error ? backendError.message : String(backendError);
-              logger.warn(LogCategory.STORY_GENERATION, `Failed to sync story to backend: ${msg}`);
-              // Continue anyway - local storage is sufficient
+              // The local copy is a good enough fallback, so this does not throw
+              // and the child keeps their story. It is recorded rather than
+              // logged away, though: this call 404'd on every save for the life
+              // of the feature and a warn line was quiet enough to hide it.
+              const appError = ErrorHandler.fromUnknown(
+                backendError, ErrorType.NETWORK, ErrorSeverity.MEDIUM,
+                { action: 'save_story_to_backend', storyId: story.storyId }
+              );
+              useErrorStore.getState().addError(BACKEND_SAVE_ERROR_KEY, appError);
             }
           }
         } catch (error) {
