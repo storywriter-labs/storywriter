@@ -173,6 +173,62 @@ describe('BookReader – auto-play behavior (card #39)', () => {
         expect(generateSpeechMock).toHaveBeenCalledTimes(1);
     });
 
+    it('Play after a pause narrates the page on screen, not the one that was paused (card #109)', async () => {
+        render(<BookReader onBack={jest.fn()} />);
+
+        await waitFor(() => {
+            expect(currentPlayer().play).toHaveBeenCalledTimes(1);
+        });
+        expect(generateSpeechMock).toHaveBeenCalledWith(SECTIONS[0].text, undefined, expect.anything());
+
+        // Pause, then turn the page. Navigation keeps the loaded player around,
+        // so page 2 is on screen with page 1's audio still in the player.
+        fireEvent.press(screen.getByLabelText('Pause narration'));
+        await waitFor(() => {
+            expect(useNarrationStore.getState().isAutoPlayEnabled).toBe(false);
+        });
+        fireEvent.press(screen.getByText('›'));
+        await waitFor(() => {
+            expect(screen.getByText('Page 2 of 2')).toBeTruthy();
+        });
+        expect(generateSpeechMock).toHaveBeenCalledTimes(1);
+
+        // Play must fetch page 2's narration rather than replaying page 1's.
+        fireEvent.press(screen.getByLabelText('Play narration'));
+
+        await waitFor(() => {
+            expect(generateSpeechMock).toHaveBeenCalledTimes(2);
+        });
+        expect(generateSpeechMock).toHaveBeenLastCalledWith(SECTIONS[1].text, undefined, expect.anything());
+        await waitFor(() => {
+            expect(currentPlayer().load).toHaveBeenCalledTimes(2);
+            expect(currentPlayer().play).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    it('Play after a pause on the same page replays what is already loaded (no refetch)', async () => {
+        render(<BookReader onBack={jest.fn()} />);
+
+        await waitFor(() => {
+            expect(currentPlayer().play).toHaveBeenCalledTimes(1);
+        });
+
+        fireEvent.press(screen.getByLabelText('Pause narration'));
+        await waitFor(() => {
+            expect(useNarrationStore.getState().isAutoPlayEnabled).toBe(false);
+        });
+
+        // Same page, so the loaded audio still belongs to it — resume, don't
+        // throw it away and fetch again.
+        fireEvent.press(screen.getByLabelText('Play narration'));
+
+        await waitFor(() => {
+            expect(currentPlayer().play).toHaveBeenCalledTimes(2);
+        });
+        expect(generateSpeechMock).toHaveBeenCalledTimes(1);
+        expect(currentPlayer().load).toHaveBeenCalledTimes(1);
+    });
+
     it('does not narrate when its screen is not focused (no duplicate audio from an off-screen reader)', async () => {
         // Reproduces the two-tracks bug: opening a book populates the global
         // story, which also mounts a second BookReader on the inactive Lab tab.

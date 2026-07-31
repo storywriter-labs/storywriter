@@ -125,6 +125,13 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
 
     const isEndPage = currentIndex === pages.length;
     const playerRef = useRef<NarrationPlayer | null>(null);
+    // Which page the audio currently loaded in playerRef belongs to. Page
+    // navigation pauses the player but deliberately keeps it loaded (a quick
+    // back-and-forth then costs nothing), so the player can outlive the page it
+    // was loaded for. Without this, pressing Play on a page that loaded no audio
+    // of its own — only reachable after an explicit Pause — replays the previous
+    // page's narration. See card #109.
+    const loadedPageIndexRef = useRef<number | null>(null);
     // Stand-in id for a story that hasn't been saved yet (mid-generation
     // preview). Only used where there's no real backend id to key on —
     // effectiveStoryId wins whenever it exists.
@@ -173,6 +180,7 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
                     });
                 }
                 await playerRef.current.load(cachedAudio);
+                loadedPageIndexRef.current = pageIndex;
                 setLoadingAudio(false);
                 return true;
             }
@@ -217,6 +225,7 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
                 });
             }
             await playerRef.current.load(audio);
+            loadedPageIndexRef.current = pageIndex;
             setLoadingAudio(false);
             return true;
         } catch (error) {
@@ -356,6 +365,7 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
                     );
                 }
                 playerRef.current = null;
+                loadedPageIndexRef.current = null;
             }
         }
     }, [setNarrationPlaying, currentIndex, effectiveStoryId]);
@@ -363,13 +373,15 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
     // User pressed Play: (re)enable the auto-play preference, generate audio for
     // the current page if it wasn't pre-loaded (because auto-play was off), then
     // play. Re-enabling the preference resumes auto-play on subsequent pages.
+    // The player may still hold a previous page's audio — navigation pauses it
+    // without unloading — so regenerate whenever what's loaded isn't this page.
     const handlePlay = useCallback(async () => {
         setAutoPlayEnabled(true);
         setAutoplayBlocked(false);
         if (isLoadingAudio) {
             return;
         }
-        if (!playerRef.current) {
+        if (!playerRef.current || loadedPageIndexRef.current !== currentIndex) {
             const currentPage = pages[currentIndex];
             if (!currentPage?.text) {
                 return;
@@ -425,6 +437,7 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
                     );
                 }
                 playerRef.current = null;
+                loadedPageIndexRef.current = null;
             }
         }
     }, [setNarrationPlaying, currentIndex, effectiveStoryId]);
