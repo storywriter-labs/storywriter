@@ -76,4 +76,4 @@ export const test = base.extend<Fixtures, WorkerFixtures>({
 });
 
 export { expect };
-export { TEST_TOKEN, TEST_USER, TEST_STORIES, makeStory, BLANK_IMAGE } from './data';
+export { TEST_TOKEN, TEST_USER, TEST_STORIES, makeStory, BLANK_IMAGE, SILENT_MP3, silentMp3 } from './data';
