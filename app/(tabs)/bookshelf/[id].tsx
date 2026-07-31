@@ -7,7 +7,10 @@ import { parseStoryBody } from '@/src/utils/parseStoryBody';
 import { StorySection } from '@/types/story';
 
 export default function StoryDetailScreen() {
-    const { slug } = useLocalSearchParams<{ slug: string }>();
+    // A story is addressed by its id, not its slug (card #107). The slug is a
+    // label on the row -- it is never rebuilt when a title changes, so it was
+    // either stale or a broken link the moment anybody renamed a story.
+    const { id } = useLocalSearchParams<{ id: string }>();
     const router = useRouter();
     // Local to this screen — a saved/bookshelf story never touches the shared
     // storyStore slice used by the in-progress creation flow, so opening one
@@ -21,7 +24,7 @@ export default function StoryDetailScreen() {
     useEffect(() => {
         const fetchStory = async () => {
             try {
-                const { data } = await client.get(`/stories/${slug}`);
+                const { data } = await client.get(`/stories/${id}`);
                 const story = data.data;
 
                 if (story.pages && story.pages.length > 0) {
@@ -47,10 +50,10 @@ export default function StoryDetailScreen() {
             }
         };
 
-        if (slug) {
+        if (id) {
             void fetchStory();
         }
-    }, [slug]);
+    }, [id]);
 
     const handleUpdatePageImage = useCallback((pageIndex: number, imageUrl: string) => {
         setSections(prev => {

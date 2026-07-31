@@ -19,10 +19,11 @@ import { parseStoryBody } from '@/src/utils/parseStoryBody';
 import { trackEvent, AnalyticsEvents } from '@/src/utils/analytics';
 import { Colors, Spacing, BorderRadius, FontSizes } from '@/constants/theme';
 
+// The API still returns a slug, but nothing here reads it: a story is addressed
+// by its id (card #107), and the slug is only a label on the row.
 interface ApiStory {
     id: number;
     name: string;
-    slug: string;
     body: string;
     prompt: string;
     created_at: string;
@@ -170,14 +171,14 @@ export default function BookshelfScreen() {
                             return (
                             <TouchableOpacity
                                 key={story.id}
-                                testID={`bookshelf-card-${story.slug}`}
+                                testID={`bookshelf-card-${story.id}`}
                                 style={[
                                     styles.card,
                                     { width: cardWidth },
                                 ]}
                                 onPress={() => {
                                     trackEvent(AnalyticsEvents.BOOKSHELF_STORY_TAPPED, { story_id: story.id });
-                                    router.push(`/bookshelf/${story.slug}`);
+                                    router.push(`/bookshelf/${story.id}`);
                                 }}
                                 activeOpacity={0.85}
                             >
