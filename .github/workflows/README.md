@@ -41,10 +41,29 @@ Manual rollback workflow for emergency situations.
 Set these secrets in your GitHub repository settings:
 
 ### AWS Credentials
+
+There are no long-lived AWS keys. The workflows assume a role over GitHub's
+OIDC provider, and each environment has its own role:
+
 ```
-AWS_ACCESS_KEY_ID       # AWS access key for S3/CloudFront access
-AWS_SECRET_ACCESS_KEY   # AWS secret key
+AWS_ROLE_ARN   # set on the staging environment AND on the production
+               # environment, with a DIFFERENT value on each
 ```
+
+Set it on the **environment**, never as a repository secret. The staging role
+can only reach the staging bucket, distribution and Terraform state, and the
+production role only production — a repository-wide secret would hand both
+environments the same credentials again.
+
+The roles are defined in [`terraform/github-oidc`](../../terraform/github-oidc),
+which is applied by hand. Its README has the runbook and explains what the
+roles can and cannot reach.
+
+Every job that assumes a role declares `environment:`. That is load-bearing:
+the production role's trust policy accepts
+`repo:storywriter-labs/storywriter:environment:production`, and GitHub only
+puts that claim in the token for jobs that declare the key. Removing
+`environment:` from an AWS-using job stops it assuming the role.
 
 ### CloudFront Distribution IDs
 ```
@@ -56,7 +75,7 @@ PROD_CLOUDFRONT_ID      # CloudFront distribution ID for production
 
 ### S3 Buckets
 - `storywriter-staging-frontend` - Staging frontend hosting
-- `storywriter-prod-frontend` - Production frontend hosting
+- `storywriter-production-frontend` - Production frontend hosting
 
 Both buckets should be configured for static website hosting.
 
@@ -79,7 +98,7 @@ Both should point to their respective CloudFront distributions.
 
 ### Production Environment  
 - API Base URL: `https://api.storywriter.net`
-- S3 Bucket: `storywriter-prod-frontend`
+- S3 Bucket: `storywriter-production-frontend`
 - Domain: `storywriter.net`
 
 ## Usage

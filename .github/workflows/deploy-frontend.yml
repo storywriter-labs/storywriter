@@ -28,6 +28,12 @@ permissions:
   id-token: write
   contents: read
 
+# Staging and production have separate AWS roles, and every job below that
+# touches AWS declares `environment:` to pick up the right one. Don't remove
+# that key to save an approval prompt: the production role's trust policy
+# matches on `environment:production`, and GitHub only puts that claim in the
+# OIDC token for jobs that declare it. See terraform/github-oidc/README.md.
+
 # One deploy at a time per environment: queued runs wait instead of racing a
 # deploy already in flight (never cancel a deploy mid-run).
 concurrency:
