@@ -27,10 +27,10 @@ const ErrorView = ({ onRetry }: { onRetry: () => void }) => {
   const randomMsg = ERROR_MESSAGES[Math.floor(Math.random() * ERROR_MESSAGES.length)];
 
   return (
-    <View style={styles.card}>
+    <View style={styles.card} testID="story-generation-error">
       <Ionicons name="happy-outline" size={FontSizes.enormous} color={Colors.coral} style={styles.iconLarge} />
       <Text style={styles.messageText}>{randomMsg}</Text>
-      <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
+      <TouchableOpacity style={styles.retryButton} onPress={onRetry} testID="story-generation-retry">
         <Text style={styles.retryText}>Try Again!</Text>
       </TouchableOpacity>
     </View>
@@ -110,7 +110,7 @@ const StoryGenerationSplash: React.FC<Props> = ({ isVisible }) => {
   if (!isVisible) return null;
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="story-generation-splash">
       {error ? (
         <ErrorView onRetry={handleRetry} />
       ) : (

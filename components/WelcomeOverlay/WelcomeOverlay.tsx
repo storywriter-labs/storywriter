@@ -22,6 +22,7 @@ const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({ onStart, visible }) => 
         style={styles.startButton}
         onPress={onStart}
         activeOpacity={0.8}
+        testID="welcome-start-story"
       >
         <Text style={styles.buttonText}>Create a Story</Text>
       </TouchableOpacity>
