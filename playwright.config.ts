@@ -44,6 +44,19 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         // iPad-ish landscape. The app targets tablets held sideways.
         viewport: { width: 1280, height: 800 },
+        // The ElevenLabs SDK asks for the microphone before it will open its
+        // socket, so a conversation test can't get off the ground without one.
+        // Chromium's fake device answers with a synthesised tone and no prompt.
+        permissions: ['microphone'],
+        launchOptions: {
+          args: [
+            '--use-fake-ui-for-media-stream',
+            '--use-fake-device-for-media-stream',
+            // No sound card in CI. Without this the audio worklets the SDK
+            // installs never start, and the conversation hangs on connect.
+            '--autoplay-policy=no-user-gesture-required',
+          ],
+        },
       },
     },
   ],

@@ -3,6 +3,8 @@ import type { Page } from '@playwright/test';
 
 import { ApiMock, applyDefaults } from './api-mock';
 import type { MockApiOptions } from './api-mock';
+import { ConversationMock } from './conversation-mock';
+import type { ConversationMockOptions } from './conversation-mock';
 import { TEST_TOKEN } from './data';
 
 /**
@@ -35,6 +37,11 @@ interface Fixtures {
    * body runs; override any endpoint by registering it again.
    */
   api: ApiMock;
+  /**
+   * The ElevenLabs conversation WebSocket, mocked. Installed for every test, so
+   * the SDK can never open a real socket even from a test that ignores it.
+   */
+  conversation: ConversationMock;
   /** Boots the app already signed in and waits for the tab bar to show up. */
   signedInPage: Page;
 }
@@ -42,10 +49,13 @@ interface Fixtures {
 interface WorkerFixtures {
   /** Tweak the defaults for a whole file with `test.use({ apiOptions: { ... } })`. */
   apiOptions: MockApiOptions;
+  /** Same, for the conversation socket — e.g. `{ failHandshake: true }`. */
+  conversationOptions: ConversationMockOptions;
 }
 
 export const test = base.extend<Fixtures, WorkerFixtures>({
   apiOptions: [{}, { option: true, scope: 'worker' }],
+  conversationOptions: [{}, { option: true, scope: 'worker' }],
 
   /**
    * `auto` so the mocks go up even for a test that never names the fixture —
@@ -58,6 +68,16 @@ export const test = base.extend<Fixtures, WorkerFixtures>({
       const api = applyDefaults(new ApiMock(page), apiOptions);
       await api.install();
       await use(api);
+    },
+    { auto: true },
+  ],
+
+  /** `auto` for the same reason as `api` — an unmocked socket is a real one. */
+  conversation: [
+    async ({ page, conversationOptions }, use) => {
+      const conversation = new ConversationMock(conversationOptions);
+      await conversation.install(page);
+      await use(conversation);
     },
     { auto: true },
   ],
@@ -76,4 +96,14 @@ export const test = base.extend<Fixtures, WorkerFixtures>({
 });
 
 export { expect };
-export { TEST_TOKEN, TEST_USER, TEST_STORIES, makeStory, BLANK_IMAGE, SILENT_MP3, silentMp3 } from './data';
+export {
+  TEST_TOKEN,
+  TEST_USER,
+  TEST_STORIES,
+  makeStory,
+  generationResponse,
+  BLANK_IMAGE,
+  SILENT_MP3,
+  silentMp3,
+} from './data';
+export { ConversationMock, SIGNED_URL } from './conversation-mock';
