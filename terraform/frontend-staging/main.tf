@@ -75,6 +75,20 @@ resource "aws_cloudfront_origin_access_control" "frontend" {
   signing_protocol                  = "sigv4"
 }
 
+# Viewer IP allowlist. Created only when var.allowed_viewer_ips is non-empty, so
+# clearing the list removes the function and reopens the site in one apply.
+resource "aws_cloudfront_function" "ip_allowlist" {
+  count = length(var.allowed_viewer_ips) > 0 ? 1 : 0
+
+  name    = "${var.environment}-storywriter-frontend-ip-allowlist"
+  runtime = "cloudfront-js-2.0"
+  comment = "Restricts ${var.domain_name} to approved viewer IPs"
+  publish = true
+  code = templatefile("${path.module}/functions/ip-allowlist.js", {
+    allowed_ips_json = jsonencode(var.allowed_viewer_ips)
+  })
+}
+
 # CloudFront Distribution
 resource "aws_cloudfront_distribution" "frontend" {
   origin {
@@ -107,6 +121,16 @@ resource "aws_cloudfront_distribution" "frontend" {
     min_ttl     = 0
     default_ttl = 3600
     max_ttl     = 86400
+
+    # Runs before the cache lookup, so a blocked address never gets a cached
+    # object and never reaches S3.
+    dynamic "function_association" {
+      for_each = aws_cloudfront_function.ip_allowlist
+      content {
+        event_type   = "viewer-request"
+        function_arn = function_association.value.arn
+      }
+    }
   }
 
   # Custom error page for SPA routing

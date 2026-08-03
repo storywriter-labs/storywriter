@@ -1,0 +1,24 @@
+# Copy to terraform.tfvars and fill in. The real file is gitignored.
+
+# Exact viewer IP addresses allowed to load staging.storywriter.net. Anything
+# else gets a 403 from the viewer-request function in functions/ip-allowlist.js.
+# Find your address with: curl -s https://checkip.amazonaws.com
+#
+# Leave as [] to serve staging publicly (no function is created at all).
+#
+# This file is for applying by hand. Deploys never see it -- the workflow reads
+# the STAGING_ALLOWED_VIEWER_IPS repository secret instead, which holds the same
+# list as JSON. Update both when the address changes, or the next deploy puts
+# the old one back.
+#
+# IPv4 only, today. The distribution has is_ipv6_enabled = true, but route53.tf
+# creates an A alias and no AAAA, so nothing can reach the site over IPv6 and
+# the addresses below are the whole story. If you ever add an AAAA alias, every
+# IPv6 viewer starts getting a 403 and the reason will not be obvious -- add the
+# IPv6 addresses here at the same time.
+#
+# This does NOT restrict staging-api.storywriter.net -- that is a separate EC2
+# instance behind storywriter-staging-sg.
+allowed_viewer_ips = [
+  # "203.0.113.10", # your home IP
+]
