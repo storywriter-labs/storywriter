@@ -6,7 +6,7 @@
 // the viewer's address can be seen, so the block happens before the cache and
 // before the S3 origin is ever consulted.
 //
-// The list is templated in from Terraform (var.allowed_viewer_cidrs), so the
+// The list is templated in from Terraform (var.allowed_viewer_ips), so the
 // generated file is the single source of truth -- do not edit the deployed
 // function in the console, the next apply overwrites it.
 //

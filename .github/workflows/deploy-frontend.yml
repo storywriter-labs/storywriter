@@ -126,6 +126,8 @@ jobs:
         
       - name: Set Terraform variables
         working-directory: ${{ needs.setup.outputs.terraform_dir }}
+        env:
+          STAGING_ALLOWED_VIEWER_IPS: ${{ secrets.STAGING_ALLOWED_VIEWER_IPS }}
         run: |
           if [ "${{ needs.setup.outputs.environment }}" = "production" ]; then
             DOMAIN_NAME="storywriter.net"
@@ -134,11 +136,33 @@ jobs:
             DOMAIN_NAME="staging.storywriter.net"
             S3_BUCKET="storywriter-staging-frontend"
           fi
-          
+
           echo "TF_VAR_environment=${{ needs.setup.outputs.environment }}" >> $GITHUB_ENV
           echo "TF_VAR_domain_name=${DOMAIN_NAME}" >> $GITHUB_ENV
           echo "TF_VAR_s3_bucket_name=${S3_BUCKET}" >> $GITHUB_ENV
-        
+
+          # Staging is private: a CloudFront function 403s any viewer whose
+          # address is not in allowed_viewer_ips. The real terraform.tfvars is
+          # gitignored (it holds a home IP), so the runner has to be told the
+          # list or the variable falls back to its [] default -- which deletes
+          # the function and quietly serves staging to the whole internet.
+          #
+          # The secret holds a JSON list, e.g. ["203.0.113.10"]. TF_VAR_ ranks
+          # below terraform.tfvars in Terraform's precedence order, so this
+          # never overrides a local file when you apply by hand.
+          #
+          # Production gets no list at all. It is meant to be public.
+          if [ "${{ needs.setup.outputs.environment }}" != "production" ]; then
+            if [ -z "${STAGING_ALLOWED_VIEWER_IPS}" ]; then
+              echo "❌ Secret STAGING_ALLOWED_VIEWER_IPS is not set."
+              echo "   Staging would be deployed with no viewer allowlist and served publicly."
+              echo "   Set it to a JSON list of addresses, e.g. [\"203.0.113.10\"]."
+              echo "   To open staging on purpose, set it to the literal [] instead of leaving it blank."
+              exit 1
+            fi
+            echo "TF_VAR_allowed_viewer_ips=${STAGING_ALLOWED_VIEWER_IPS}" >> $GITHUB_ENV
+          fi
+
       - name: Terraform Plan - Infrastructure Validation
         working-directory: ${{ needs.setup.outputs.terraform_dir }}
         run: |

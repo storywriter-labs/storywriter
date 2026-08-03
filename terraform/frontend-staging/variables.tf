@@ -35,6 +35,11 @@ variable "allowed_viewer_ips" {
 
     Set to [] to disable the allowlist and serve staging publicly again.
 
+    Deploys read this from the STAGING_ALLOWED_VIEWER_IPS repository secret,
+    because the real terraform.tfvars is gitignored and never reaches the
+    runner. Changing the address means changing it in both places, or in the
+    secret alone if you only ever apply from CI.
+
     This does not protect staging-api.storywriter.net, which is a separate EC2
     instance behind its own security group.
   EOT
