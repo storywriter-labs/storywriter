@@ -26,3 +26,18 @@ variable "price_class" {
   type        = string
   default     = "PriceClass_100"
 }
+
+variable "allowed_viewer_ips" {
+  description = <<-EOT
+    Exact viewer IP addresses allowed to load staging.storywriter.net. Everything
+    else gets a 403 from a CloudFront viewer-request function. Addresses, not
+    CIDRs: the function does exact matching (see functions/ip-allowlist.js).
+
+    Set to [] to disable the allowlist and serve staging publicly again.
+
+    This does not protect staging-api.storywriter.net, which is a separate EC2
+    instance behind its own security group.
+  EOT
+  type        = list(string)
+  default     = []
+}

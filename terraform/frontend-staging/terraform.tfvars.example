@@ -1,0 +1,13 @@
+# Copy to terraform.tfvars and fill in. The real file is gitignored.
+
+# Exact viewer IP addresses allowed to load staging.storywriter.net. Anything
+# else gets a 403 from the viewer-request function in functions/ip-allowlist.js.
+# Find your address with: curl -s https://checkip.amazonaws.com
+#
+# Leave as [] to serve staging publicly (no function is created at all).
+#
+# This does NOT restrict staging-api.storywriter.net -- that is a separate EC2
+# instance behind storywriter-staging-sg.
+allowed_viewer_ips = [
+  # "203.0.113.10", # your home IP
+]

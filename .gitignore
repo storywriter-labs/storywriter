@@ -35,6 +35,9 @@ yarn-error.log*
 *.tfplan
 terraform/discovered.tfvars
 terraform/import-commands.sh
+# Real tfvars hold home IP addresses for the staging allowlist. Committed
+# *.tfvars.example files show the shape.
+*.tfvars
 
 # AWS CLI
 .aws/
