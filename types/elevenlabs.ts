@@ -161,6 +161,18 @@ export interface ConversationMessage {
   [key: string]: any;
 }
 
+// A tool the agent can invoke on us mid-conversation. The string it returns is
+// sent back to the agent as the tool result.
+export type ConversationClientTool = (
+  parameters: Record<string, any>
+) => Promise<string | number | void> | string | number | void;
+
+export interface ConversationClientToolCall {
+  tool_name: string;
+  tool_call_id: string;
+  parameters: Record<string, any>;
+}
+
 export interface ConversationCallbacks {
   onConnect?: () => void;
   onDisconnect?: () => void;
@@ -168,6 +180,11 @@ export interface ConversationCallbacks {
   onError?: (error: any) => void;
   onStatusChange?: (status: string) => void;
   onModeChange?: (mode: string) => void;
+
+  // Tool calls never arrive through onMessage — the SDK looks the name up in
+  // clientTools and, failing that, hands it to onUnhandledClientToolCall.
+  clientTools?: Record<string, ConversationClientTool>;
+  onUnhandledClientToolCall?: (toolCall: ConversationClientToolCall) => void;
 }
 
 export interface ConversationSession {

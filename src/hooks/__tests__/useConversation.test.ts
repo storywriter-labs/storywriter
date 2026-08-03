@@ -1,17 +1,18 @@
 import { renderHook, act } from '@testing-library/react-native';
 import ElevenLabsService from '@/services/elevenLabsService';
 import { TranscriptProcessor } from '@/src/utils/transcriptProcessor';
-import { createNarrationPlayer } from '@/services/narration';
-import { extractAudioFromMessage } from '@/services/narration/audioDecoder';
 import { useErrorStore } from '@/src/stores/errorStore';
 import { ChildFriendlyErrors } from '@/src/utils/errorHandler';
-import { useConversation, CONVERSATION_ERROR_KEY } from '../useConversation';
+import {
+  useConversation,
+  CONVERSATION_ERROR_KEY,
+  END_CONVERSATION_TOOL_NAMES,
+} from '../useConversation';
 
 // Mock dependencies BEFORE importing useConversation
 jest.mock('@/services/elevenLabsService');
 jest.mock('@/src/utils/transcriptProcessor');
 jest.mock('@/src/utils/analytics');
-jest.mock('@/services/narration/audioDecoder');
 
 let mockGenerateStoryAutomatically = jest.fn().mockResolvedValue(undefined);
 
@@ -43,7 +44,6 @@ jest.mock('@/src/stores/conversationStore', () => ({
 
 describe('useConversation', () => {
   let mockStartConversationAgent: jest.Mock;
-  let mockNarrationPlayer: jest.Mock;
 
   const setStoreConfig = (overrides: Partial<typeof mockStoreConfig> = {}) => {
     mockStoreConfig = {
@@ -72,12 +72,6 @@ describe('useConversation', () => {
     (ElevenLabsService as unknown as Record<string, jest.Mock>).startConversationAgent = mockStartConversationAgent;
     (ElevenLabsService as unknown as Record<string, jest.Mock>).forceCleanup = jest.fn();
 
-    // Mock narration player
-    mockNarrationPlayer = jest.fn().mockResolvedValue(undefined);
-    (createNarrationPlayer as jest.Mock).mockReturnValue({
-      playOnce: mockNarrationPlayer,
-    });
-
     // Mock transcript processor
     (TranscriptProcessor.validateAndProcess as jest.Mock).mockReturnValue(
       'User: Hello\nAgent: Hi there'
@@ -85,9 +79,6 @@ describe('useConversation', () => {
     (TranscriptProcessor.processTranscript as jest.Mock).mockReturnValue(
       'User: Hello\nAgent: Hi there'
     );
-
-    // Mock audio decoder
-    (extractAudioFromMessage as jest.Mock).mockReturnValue(new Uint8Array([1, 2, 3]));
   });
 
   afterEach(() => {
@@ -289,33 +280,6 @@ describe('useConversation', () => {
       expect(result.current.currentSpeaker).toBe('none');
     });
 
-    it('should handle audio messages by playing them', async () => {
-      const mockSession = {
-        endSession: jest.fn().mockResolvedValue(undefined),
-      };
-      mockStartConversationAgent.mockResolvedValue(mockSession);
-
-      const { result } = renderHook(() => useConversation());
-
-      await act(async () => {
-        result.current.startConversation();
-      });
-
-      const startCallArgs = mockStartConversationAgent.mock.calls[0][0];
-      const onMessage = startCallArgs.onMessage;
-
-      act(() => {
-        onMessage({
-          type: 'audio',
-          audio: 'base64encodedaudio',
-          timestamp: Date.now(),
-        });
-      });
-
-      expect(createNarrationPlayer).toHaveBeenCalled();
-      expect(mockNarrationPlayer).toHaveBeenCalledWith(new Uint8Array([1, 2, 3]));
-    });
-
     it('should ignore empty messages', async () => {
       const mockSession = {
         endSession: jest.fn().mockResolvedValue(undefined),
@@ -354,6 +318,97 @@ describe('useConversation', () => {
       });
 
       expect(result.current.messages).toHaveLength(1);
+    });
+  });
+
+  // --- Card #111: the agent has to be able to end the conversation ----------
+  // The end tool used to be watched for on onMessage, where the SDK never
+  // sends it. Unregistered, it went to onError instead, so the kid got the
+  // error card instead of the story the screen promised them.
+
+  describe('the agent ending the conversation', () => {
+    const startWithSession = async () => {
+      const mockSession = { endSession: jest.fn().mockResolvedValue(undefined) };
+      mockStartConversationAgent.mockResolvedValue(mockSession);
+
+      const { result } = renderHook(() => useConversation());
+
+      await act(async () => {
+        result.current.startConversation();
+      });
+
+      const startCallArgs = mockStartConversationAgent.mock.calls[0][0];
+
+      // Two user turns, so the transcript is worth generating a story from
+      act(() => {
+        startCallArgs.onMessage({ source: 'user', message: 'A dragon story' });
+        startCallArgs.onMessage({ source: 'ai', message: 'What colour dragon?' });
+        startCallArgs.onMessage({ source: 'user', message: 'Green' });
+      });
+
+      return { result, mockSession, startCallArgs };
+    };
+
+    it.each(END_CONVERSATION_TOOL_NAMES)('registers %s as a client tool', async (toolName) => {
+      const { startCallArgs } = await startWithSession();
+
+      expect(typeof startCallArgs.clientTools[toolName]).toBe('function');
+    });
+
+    it.each(END_CONVERSATION_TOOL_NAMES)(
+      'generates the story when the agent calls %s',
+      async (toolName) => {
+        const { startCallArgs } = await startWithSession();
+
+        await act(async () => {
+          startCallArgs.clientTools[toolName]({});
+          jest.advanceTimersByTime(0);
+        });
+
+        expect(mockStoreConfig.endConversation).toHaveBeenCalledWith('User: Hello\nAgent: Hi there');
+
+        act(() => {
+          jest.advanceTimersByTime(500);
+        });
+
+        expect(mockGenerateStoryAutomatically).toHaveBeenCalledWith('User: Hello\nAgent: Hi there');
+      }
+    );
+
+    it('answers the tool call before hanging up, so the reply reaches the agent', async () => {
+      const { mockSession, startCallArgs } = await startWithSession();
+
+      let toolResult: unknown;
+      await act(async () => {
+        toolResult = await startCallArgs.clientTools.end_conversation({});
+      });
+
+      // The SDK sends this back over the socket, so the socket has to still be
+      // open at this point.
+      expect(typeof toolResult).toBe('string');
+      expect(mockSession.endSession).not.toHaveBeenCalled();
+
+      await act(async () => {
+        jest.advanceTimersByTime(0);
+      });
+
+      expect(mockSession.endSession).toHaveBeenCalled();
+    });
+
+    it('keeps the conversation alive when the agent calls a tool we do not have', async () => {
+      const { startCallArgs } = await startWithSession();
+
+      act(() => {
+        startCallArgs.onUnhandledClientToolCall({
+          tool_name: 'send_postcard',
+          tool_call_id: 'call-1',
+          parameters: {},
+        });
+      });
+
+      expect(useErrorStore.getState().getError(CONVERSATION_ERROR_KEY)).toBeUndefined();
+      expect(mockStoreConfig.resetConversation).not.toHaveBeenCalled();
+      expect(mockStoreConfig.endConversation).not.toHaveBeenCalled();
     });
   });
 

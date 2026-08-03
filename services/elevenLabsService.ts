@@ -234,6 +234,19 @@ export class ElevenLabsService {
       const conversation = await Conversation.startSession({
         signedUrl: signed_url,
 
+        // Tools the agent can call on us, keyed by the exact name it uses.
+        // Anything not listed here goes to onUnhandledClientToolCall, and if
+        // that is missing too the SDK reports it through onError and tears the
+        // session down — which is how the agent's "write the story" call used
+        // to kill the conversation (#111).
+        clientTools: callbacks.clientTools ?? {},
+
+        // Only forwarded when the caller supplies a handler, so that a caller
+        // who registers no tools keeps the SDK's own error-and-report default.
+        ...(callbacks.onUnhandledClientToolCall
+          ? { onUnhandledClientToolCall: callbacks.onUnhandledClientToolCall }
+          : {}),
+
         onConnect: () => {
           this.connectionState = ConnectionState.CONNECTED;
           serviceLogger.elevenlabs.call('WebSocket connected');

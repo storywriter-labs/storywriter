@@ -8,8 +8,6 @@ import { ErrorHandler, ErrorType, ErrorSeverity, ChildFriendlyErrors } from '@/s
 import { conversationLogger, logger, LogCategory } from '@/src/utils/logger';
 import { TranscriptProcessor } from '@/src/utils/transcriptProcessor';
 import { trackEvent, AnalyticsEvents } from '@/src/utils/analytics';
-import { createNarrationPlayer } from '@/services/narration';
-import { extractAudioFromMessage } from '@/services/narration/audioDecoder';
 
 export interface ConversationMessage {
   role: 'user' | 'agent';
@@ -24,6 +22,14 @@ export interface ConversationMessage {
  * the web build, so a kid whose conversation dropped out saw nothing (#87).
  */
 export const CONVERSATION_ERROR_KEY = 'conversation';
+
+/**
+ * Names the agent may use for "I have enough, write the story". Which one it
+ * actually calls depends on the ElevenLabs agent config, so both are
+ * registered — the SDK matches on the exact name and treats a miss as a fatal
+ * error (#111).
+ */
+export const END_CONVERSATION_TOOL_NAMES = ['end_conversation', 'end_call'] as const;
 
 /**
  * Puts a conversation failure somewhere the UI can find it. The message a kid
@@ -65,6 +71,16 @@ export const useConversation = (): UseConversationReturn => {
   const speakerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const conversationStartTimeRef = useRef<number>(0);
 
+  // The SDK callbacks below are handed over once, when the session starts, so
+  // they close over the state of that render — where the session is still
+  // null. Reading it from a ref is what lets the agent-triggered end actually
+  // hang up instead of leaving the socket open.
+  const conversationSessionRef = useRef<ConversationSession | null>(null);
+  const setSession = useCallback((session: ConversationSession | null) => {
+    conversationSessionRef.current = session;
+    setConversationSession(session);
+  }, []);
+
   const phase = useConversationStore(s => s.phase);
   const storeStartConversation = useConversationStore(s => s.startConversation);
   const storeEndConversation = useConversationStore(s => s.endConversation);
@@ -102,9 +118,11 @@ export const useConversation = (): UseConversationReturn => {
       duration_seconds: durationSeconds,
     });
 
-    if (conversationSession) {
+    const session = conversationSessionRef.current;
+
+    if (session) {
       try {
-        await conversationSession.endSession();
+        await session.endSession();
       } catch (error) {
         // Log only, on purpose: we already have the transcript and are about to
         // generate the story, so a failed hang-up is nothing the kid can act on
@@ -118,13 +136,13 @@ export const useConversation = (): UseConversationReturn => {
       }
     }
 
-    setConversationSession(null);
+    setSession(null);
     storeEndConversation(finalTranscript);
 
     setTimeout(() => {
       void generateStoryAutomatically(finalTranscript);
     }, 500);
-  }, [conversationSession, storeEndConversation, generateStoryAutomatically]);
+  }, [setSession, storeEndConversation, generateStoryAutomatically]);
 
   // Validate and process transcript
   const processTranscriptAndEnd = useCallback(() => {
@@ -138,6 +156,31 @@ export const useConversation = (): UseConversationReturn => {
     pendingFlushRef.current = false;
     void handleEndConversationInternal(finalTranscript);
   }, [handleEndConversationInternal]);
+
+  /**
+   * Runs when the agent calls its end tool. Returns straight away with the
+   * result the SDK sends back to the agent, and lets the hang-up happen on the
+   * next tick — closing the socket first would make that send throw, and the
+   * SDK turns a throw here back into the error the kid was never meant to see.
+   */
+  const handleEndConversationTool = useCallback((toolName: string) => {
+    logger.info(LogCategory.CONVERSATION, 'Agent called end tool - processing transcript and ending conversation', {
+      toolName,
+      messageCount: rawMessages.current.length,
+    });
+
+    if (flushTimeoutRef.current) {
+      clearTimeout(flushTimeoutRef.current);
+      flushTimeoutRef.current = null;
+    }
+    pendingFlushRef.current = false;
+
+    setTimeout(() => {
+      processTranscriptAndEnd();
+    }, 0);
+
+    return 'Ending the conversation now.';
+  }, [processTranscriptAndEnd]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -190,7 +233,7 @@ export const useConversation = (): UseConversationReturn => {
 
         onDisconnect: () => {
           conversationLogger.disconnected();
-          setConversationSession(null);
+          setSession(null);
 
           if (rawMessages.current.length > 0) {
             const userMessages = rawMessages.current.filter(msg => msg.role === 'user');
@@ -217,29 +260,10 @@ export const useConversation = (): UseConversationReturn => {
           }
         },
 
+        // The agent's own audio is played by the SDK, and tool calls come in
+        // through clientTools below — onMessage only ever carries the agent's
+        // and the kid's words.
         onMessage: (message: ElevenLabsMessage) => {
-          // Handle audio messages from ElevenLabs
-          if (message.type === 'audio' && (message.audio || message.data)) {
-            try {
-              const audioArray = extractAudioFromMessage(message);
-              if (!audioArray) {
-                logger.warn(LogCategory.CONVERSATION, 'No audio data found in message');
-                return;
-              }
-
-              const player = createNarrationPlayer();
-              player.playOnce(audioArray).catch(error => {
-                logger.error(LogCategory.CONVERSATION, 'Failed to play audio', { error });
-              });
-
-              logger.debug(LogCategory.CONVERSATION, 'Playing audio chunk', {
-                audioSize: audioArray.length
-              });
-            } catch (error) {
-              logger.error(LogCategory.CONVERSATION, 'Failed to process audio message', { error });
-            }
-          }
-
           // Capture messages for real transcript generation
           if (message.source && message.message && message.message.trim()) {
             const role = message.source === 'user' ? 'user' : 'agent';
@@ -272,47 +296,34 @@ export const useConversation = (): UseConversationReturn => {
 
             pendingFlushRef.current = true;
             scheduleMessageProcessing();
-          }
-
-          // Handle end_conversation tool calls
-          if (message.type === 'client_tool_call') {
-            const toolCall = message.client_tool_call;
-
-            logger.debug(LogCategory.CONVERSATION, 'Received client tool call', {
-              toolName: toolCall?.tool_name,
-              messageType: message.type,
-              fullMessage: message
-            });
-
-            if (toolCall && (toolCall.tool_name === 'end_conversation' || toolCall.tool_name === 'end_call')) {
-              logger.info(LogCategory.CONVERSATION, 'Agent called end tool - processing transcript and ending conversation', {
-                toolName: toolCall.tool_name,
-                messageCount: rawMessages.current.length
-              });
-
-              if (flushTimeoutRef.current) {
-                clearTimeout(flushTimeoutRef.current);
-                flushTimeoutRef.current = null;
-              }
-
-              pendingFlushRef.current = false;
-              processTranscriptAndEnd();
-            }
           } else {
-            logger.debug(LogCategory.CONVERSATION, 'Received message', {
-              messageType: message.type,
+            logger.debug(LogCategory.CONVERSATION, 'Received message with no usable text', {
               source: message.source,
-              hasContent: !!message.message,
-              hasAudio: !!message.audio,
-              hasData: !!message.data,
               keys: Object.keys(message)
             });
           }
         },
 
+        clientTools: Object.fromEntries(
+          END_CONVERSATION_TOOL_NAMES.map(toolName => [
+            toolName,
+            () => handleEndConversationTool(toolName),
+          ])
+        ),
+
+        // A tool we don't know about means the agent config has moved on
+        // without us. Say so in the log, but leave the kid talking — dropping
+        // them into the error card over it is worse than ignoring the call.
+        onUnhandledClientToolCall: (toolCall) => {
+          logger.warn(LogCategory.CONVERSATION, 'Agent called a tool the app does not implement', {
+            toolName: toolCall?.tool_name,
+            knownTools: END_CONVERSATION_TOOL_NAMES,
+          });
+        },
+
         onError: (error) => {
           setIsConnecting(false);
-          setConversationSession(null);
+          setSession(null);
           // The session is gone, so drop the phase back to IDLE. Left on ACTIVE
           // the screen keeps showing the mic and "Listening..." for a
           // conversation that isn't there, and the retry below is a no-op.
@@ -324,7 +335,7 @@ export const useConversation = (): UseConversationReturn => {
         },
       });
 
-      setConversationSession(session);
+      setSession(session);
 
       try {
         const elevenLabsConversationId = session.getId();
