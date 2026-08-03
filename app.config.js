@@ -89,6 +89,13 @@ export default ({ config }) => ({
       apiBaseUrl: getApiBaseUrl(),
       environment: IS_PRODUCTION ? 'production' : IS_STAGING ? 'staging' : 'development',
 
+      // Pre-release gate (temporary). Deliberately its own flag rather than a
+      // check on `environment` above: `expo export` forces NODE_ENV=production
+      // for *every* export — staging deploys and the CI e2e build included —
+      // so `environment` cannot tell production apart from the rest.
+      // Set by the production deploy job only; see .github/workflows/deploy-frontend.yml.
+      PRERELEASE_GATE: process.env.PRERELEASE_GATE === 'true',
+
       // PostHog Analytics
       POSTHOG_API_KEY: process.env.POSTHOG_API_KEY || '',
       POSTHOG_HOST: process.env.POSTHOG_HOST || 'https://us.i.posthog.com',

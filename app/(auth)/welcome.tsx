@@ -1,13 +1,15 @@
 // app/(auth)/welcome.tsx
 
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import BackgroundImage from '../../components/BackgroundImage/BackgroundImage';
 import { Colors, Spacing, BorderRadius, FontSizes } from '../../constants/theme';
+import { isPrereleaseGated, REQUEST_INVITE_URL } from '../../constants/prerelease';
 
 export default function WelcomeScreen() {
     const router = useRouter();
+    const gated = isPrereleaseGated();
 
     return (
         <BackgroundImage opacity={0.4}>
@@ -20,17 +22,30 @@ export default function WelcomeScreen() {
                     </View>
 
                     <Text style={styles.subtitle}>
-                        Speak your ideas out loud and watch them turn into a storybook,
-                        complete with pictures and narration!
+                        {gated
+                            ? 'StoryWriter is not yet in public release.'
+                            : 'Speak your ideas out loud and watch them turn into a storybook, complete with pictures and narration!'}
                     </Text>
 
-                    <TouchableOpacity
-                        style={styles.button}
-                        testID="welcome-get-started"
-                        onPress={() => router.push('/(auth)/terms')}
-                    >
-                        <Text style={styles.buttonText}>Try It Now!</Text>
-                    </TouchableOpacity>
+                    {gated ? (
+                        <TouchableOpacity
+                            style={styles.button}
+                            testID="welcome-request-invite"
+                            onPress={() => {
+                                void Linking.openURL(REQUEST_INVITE_URL);
+                            }}
+                        >
+                            <Text style={styles.buttonText}>Request Invite</Text>
+                        </TouchableOpacity>
+                    ) : (
+                        <TouchableOpacity
+                            style={styles.button}
+                            testID="welcome-get-started"
+                            onPress={() => router.push('/(auth)/terms')}
+                        >
+                            <Text style={styles.buttonText}>Try It Now!</Text>
+                        </TouchableOpacity>
+                    )}
 
                     <TouchableOpacity
                         style={styles.linkButton}

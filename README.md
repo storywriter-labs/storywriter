@@ -101,6 +101,26 @@ Staging is deliberately unrestricted — dispatch it from any branch you like.
 reads it, and the git tag is created from it by `npm version`. Never hand-edit
 one of the three.
 
+### Pre-release gate (temporary)
+
+Production is invite-only. The production build ships with `PRERELEASE_GATE=true`,
+which makes the welcome screen say *"StoryWriter is not yet in public release."*
+and swaps *Try It Now!* for **Request Invite** (→ `labs.storywriter.net/request-access`).
+`/(auth)/terms` and `/(auth)/register` redirect back to welcome, so the direct
+URL is closed too. Log in is untouched: existing accounts still work.
+
+Staging and local builds are unaffected — the flag is set only by the
+production deploy job. Note that the gate is *not* keyed on `extra.environment`:
+`expo export` forces `NODE_ENV=production` for every export, so staging and the
+CI Playwright build report `production` as well.
+
+Preview it locally with `PRERELEASE_GATE=true npm run web`.
+
+To open public sign-up: delete the `PRERELEASE_GATE` line from the build step in
+`deploy-frontend.yml`, then `constants/prerelease.ts` and its three call sites
+(`app/(auth)/welcome.tsx`, `app/(auth)/_layout.tsx`, `app.config.js`) and the
+`app/(auth)/__tests__/prerelease-gate.test.tsx` suite.
+
 ### Cutting a release
 
 1. On an up-to-date `main` with a clean working tree:
