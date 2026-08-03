@@ -15,12 +15,23 @@ Now there are two roles:
 
 | Role | Assumable from | Reaches |
 |---|---|---|
-| `storywriter-frontend-deploy-staging` | `refs/heads/main`, or the `staging` environment | `storywriter-staging-frontend`, the staging distribution, `frontend-staging/` state |
+| `storywriter-frontend-deploy-staging` | `refs/heads/main`, or the `staging` environment | `storywriter-staging-frontend`, the staging distribution, the staging IP-allowlist function, `frontend-staging/` state |
 | `storywriter-frontend-deploy-production` | a `v*` tag, or the `production` environment | `storywriter-production-frontend`, the production distribution, `frontend-production/` state |
 
 Neither role has any IAM permissions, so neither can widen its own access —
 which is also why this stack is applied by a human with admin credentials
 rather than by CI.
+
+Staging has one thing production does not: the CloudFront function that holds
+`staging.storywriter.net` to a short list of viewer IPs. Terraform owns that
+function's code, so the staging deploy needs to publish new versions of it.
+The permission is granted by name, through `cloudfront_function_names` on the
+module, so the staging role reaches that function and nothing else. Production
+passes an empty list and gets no function permissions at all.
+
+Rename the function in `terraform/frontend-staging/main.tf` and the name has to
+change here too. Miss it and the staging deploy fails with `AccessDenied` on
+`cloudfront:UpdateFunction`.
 
 ## Applying it
 

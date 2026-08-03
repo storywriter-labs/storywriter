@@ -39,6 +39,19 @@ variable "cloudfront_distribution_arn" {
   type        = string
 }
 
+variable "cloudfront_function_names" {
+  description = <<-EOT
+    CloudFront functions this environment's stack manages, by name. Staging
+    uses one to hold the viewer IP allowlist; production has none, so it gets
+    an empty list and no function permissions at all.
+
+    Names, not ARNs. The module builds the ARNs, so a role can only reach the
+    functions named here and not the other environment's.
+  EOT
+  type        = list(string)
+  default     = []
+}
+
 variable "state_bucket_name" {
   description = "S3 bucket holding the Terraform remote state"
   type        = string

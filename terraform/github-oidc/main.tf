@@ -108,8 +108,13 @@ module "staging_deploy_role" {
   cloudfront_distribution_arn = local.distribution_arn["staging"]
   state_bucket_name           = var.state_bucket_name
   state_key_prefix            = "frontend-staging"
-  lock_table_name             = var.lock_table_name
-  hosted_zone_id              = data.aws_route53_zone.main.zone_id
+
+  # The viewer IP allowlist that keeps staging private. The name is built the
+  # same way in terraform/frontend-staging/main.tf; change it there and it has
+  # to change here too, or the deploy loses the right to publish it.
+  cloudfront_function_names = ["staging-storywriter-frontend-ip-allowlist"]
+  lock_table_name           = var.lock_table_name
+  hosted_zone_id            = data.aws_route53_zone.main.zone_id
 }
 
 # Production is reachable only from a release tag or from a job running in the
@@ -136,6 +141,10 @@ module "production_deploy_role" {
   cloudfront_distribution_arn = local.distribution_arn["production"]
   state_bucket_name           = var.state_bucket_name
   state_key_prefix            = "frontend-production"
-  lock_table_name             = var.lock_table_name
-  hosted_zone_id              = data.aws_route53_zone.main.zone_id
+
+  # Production runs no CloudFront function. It is a public site, so it has no
+  # allowlist to publish. Left empty, the role gets no function permissions.
+  cloudfront_function_names = []
+  lock_table_name           = var.lock_table_name
+  hosted_zone_id            = data.aws_route53_zone.main.zone_id
 }

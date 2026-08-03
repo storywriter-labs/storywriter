@@ -15,6 +15,11 @@ locals {
   account_id   = data.aws_caller_identity.current.account_id
   site_bucket  = "arn:aws:s3:::${var.site_bucket_name}"
   state_bucket = "arn:aws:s3:::${var.state_bucket_name}"
+
+  cloudfront_function_arns = [
+    for name in var.cloudfront_function_names :
+    "arn:aws:cloudfront::${local.account_id}:function/${name}"
+  ]
 }
 
 # One role per environment. Two things keep the environments apart: the trust
@@ -117,6 +122,54 @@ resource "aws_iam_role_policy" "cloudfront" {
           "cloudfront:UpdateOriginAccessControl",
           "cloudfront:DeleteOriginAccessControl",
           "cloudfront:ListOriginAccessControls",
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# CloudFront functions. Staging runs one on viewer-request to hold the site to
+# a short list of viewer IPs, and Terraform manages its code, so the deploy
+# needs to publish new versions of it. Created only for an environment that
+# actually has a function -- production passes an empty list and gets none of
+# this.
+#
+# Attaching a function to the distribution is an UpdateDistribution call, which
+# the cloudfront policy above already grants against this environment's
+# distribution alone.
+resource "aws_iam_role_policy" "cloudfront_functions" {
+  count = length(var.cloudfront_function_names) > 0 ? 1 : 0
+
+  name = "cloudfront-functions"
+  role = aws_iam_role.deploy.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "OwnEnvironmentFunctionsOnly"
+        Effect = "Allow"
+        Action = [
+          "cloudfront:DescribeFunction",
+          "cloudfront:GetFunction",
+          "cloudfront:UpdateFunction",
+          "cloudfront:PublishFunction",
+          "cloudfront:DeleteFunction",
+        ]
+        Resource = local.cloudfront_function_arns
+      },
+      {
+        # Same reasoning as CreateDistribution above: the function does not
+        # exist yet when CreateFunction is called, and ListFunctions is an
+        # account-wide read, so neither takes a resource. Creating a new
+        # function is harmless -- changing or deleting an existing one is the
+        # part that matters, and that is scoped above.
+        Sid    = "CloudFrontFunctionActionsWithoutResourceScoping"
+        Effect = "Allow"
+        Action = [
+          "cloudfront:CreateFunction",
+          "cloudfront:ListFunctions",
         ]
         Resource = "*"
       }
