@@ -280,6 +280,10 @@ jobs:
           POSTHOG_API_KEY: ${{ vars.POSTHOG_API_KEY }}
           POSTHOG_HOST: ${{ vars.POSTHOG_HOST || 'https://us.i.posthog.com' }}
           ENVIRONMENT: ${{ needs.setup.outputs.environment }}
+          # Temporary: production is invite-only, so that build hides sign-up
+          # behind "Request Invite". Staging stays open. Delete this line (and
+          # frontend/constants/prerelease.ts) to open public sign-up.
+          PRERELEASE_GATE: ${{ needs.setup.outputs.environment == 'production' }}
         run: |
           if [ -z "$API_BASE_URL" ] || [ "$API_BASE_URL" = "null" ]; then
             echo "⚠️  API_BASE_URL environment variable not set, using default"
