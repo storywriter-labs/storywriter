@@ -442,29 +442,90 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ needs.setup.outputs.environment }}
     steps:
+      # Staging and production are checked for different things, because they
+      # are not equally reachable from here.
+      #
+      # Production is public, so a 200 is the answer.
+      #
+      # Staging is held to a short list of viewer IPs by a CloudFront function
+      # (terraform/frontend-staging/functions/ip-allowlist.js), and a GitHub
+      # runner will never be on that list -- GitHub's address ranges are far too
+      # many and too broad to allowlist without giving the whole internet in
+      # with them. So the runner cannot see the site, and asking for a 200 here
+      # only tests that we forgot to lock it down.
+      #
+      # A 403 carrying the function's own message is the useful check instead.
+      # It proves two things at once: CloudFront is serving the distribution,
+      # and the allowlist is live. Origin errors cannot be mistaken for it --
+      # the distribution maps an origin 403 to index.html with a 200, so a 403
+      # reaching the viewer can only have come from the function.
+      #
+      # This means CI no longer confirms the new bundle is what gets served.
+      # The `deploy` job's S3 sync is what that rests on now.
       - name: Verify deployment
+        env:
+          ENVIRONMENT: ${{ needs.setup.outputs.environment }}
+          DOMAIN: ${{ needs.infrastructure.outputs.domain }}
+          CF_DOMAIN: ${{ needs.infrastructure.outputs.cloudfront_domain }}
         run: |
-          echo "Verifying deployment at https://${{ needs.infrastructure.outputs.domain }}"
-          echo "CloudFront domain: ${{ needs.infrastructure.outputs.cloudfront_domain }}"
-          
+          echo "Verifying deployment at https://${DOMAIN}"
+          echo "CloudFront domain: ${CF_DOMAIN}"
+
           # Wait a moment for DNS propagation
           sleep 30
-          
-          # Test if the site is accessible via custom domain
-          echo "Testing custom domain..."
-          if curl -f -m 10 "https://${{ needs.infrastructure.outputs.domain }}"; then
-            echo "✅ Custom domain deployment verification passed"
-          else
-            echo "⚠️  Custom domain test failed, testing CloudFront domain..."
-            # Fallback to CloudFront domain
-            if curl -f -m 10 "https://${{ needs.infrastructure.outputs.cloudfront_domain }}"; then
-              echo "✅ CloudFront domain accessible (DNS may need more time)"
+
+          # Prints the status code, leaves the body in /tmp/verify-body.
+          status_of() {
+            curl -s -m 10 -o /tmp/verify-body -w '%{http_code}' "$1" || echo "000"
+          }
+
+          if [ "${ENVIRONMENT}" = "production" ]; then
+            echo "Testing custom domain..."
+            if curl -f -m 10 -o /dev/null -s "https://${DOMAIN}"; then
+              echo "✅ Custom domain deployment verification passed"
             else
-              echo "❌ Deployment verification failed on both domains"
-              exit 1
+              echo "⚠️  Custom domain test failed, testing CloudFront domain..."
+              if curl -f -m 10 -o /dev/null -s "https://${CF_DOMAIN}"; then
+                echo "✅ CloudFront domain accessible (DNS may need more time)"
+              else
+                echo "❌ Deployment verification failed on both domains"
+                exit 1
+              fi
             fi
+            exit 0
           fi
-          
+
+          echo "Staging is IP-restricted. Expecting a 403 from the allowlist function."
+          STATUS=$(status_of "https://${DOMAIN}")
+          BODY=$(cat /tmp/verify-body)
+
+          case "${STATUS}" in
+            403)
+              if echo "${BODY}" | grep -q "restricted to approved addresses"; then
+                echo "✅ CloudFront is serving and the viewer allowlist is live"
+              else
+                echo "❌ Got a 403, but not from the allowlist function."
+                echo "   Body was: ${BODY}"
+                exit 1
+              fi
+              ;;
+            200)
+              echo "❌ staging.storywriter.net answered a GitHub runner with a 200."
+              echo "   The viewer allowlist is not in force -- staging is public."
+              echo "   Check allowed_viewer_ips and the STAGING_ALLOWED_VIEWER_IPS secret."
+              exit 1
+              ;;
+            000)
+              echo "❌ No response from https://${DOMAIN} within 10s"
+              exit 1
+              ;;
+            *)
+              echo "❌ Unexpected status ${STATUS} from https://${DOMAIN}"
+              echo "   Body was: ${BODY}"
+              exit 1
+              ;;
+          esac
+
       - name: Verify Terraform state consistency
         run: |
           # This would typically involve checking that deployed resources match Terraform state
