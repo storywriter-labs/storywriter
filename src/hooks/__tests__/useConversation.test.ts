@@ -412,6 +412,96 @@ describe('useConversation', () => {
     });
   });
 
+  // --- Card #111, second path: the `end_call` system tool -------------------
+  // ElevenLabs support confirmed the agent's real hang-up tool is the *system*
+  // tool `end_call`. System tools never reach clientTools — the SDK ends the
+  // session itself, so the only place we hear about it is onDisconnect, with
+  // reason 'agent'. A deliberate end must produce a story even when the child
+  // only spoke once, because the two-turn floor exists for dropped sockets.
+
+  describe('the agent ending the call itself', () => {
+    const startWithUserTurns = async (userTurnCount: number) => {
+      const mockSession = { endSession: jest.fn().mockResolvedValue(undefined) };
+      mockStartConversationAgent.mockResolvedValue(mockSession);
+
+      const { result } = renderHook(() => useConversation());
+
+      await act(async () => {
+        result.current.startConversation();
+      });
+
+      const startCallArgs = mockStartConversationAgent.mock.calls[0][0];
+
+      act(() => {
+        startCallArgs.onMessage({ source: 'ai', message: 'What shall we write about?' });
+        for (let i = 0; i < userTurnCount; i++) {
+          startCallArgs.onMessage({ source: 'user', message: `Turn ${i + 1}` });
+        }
+      });
+
+      return { result, mockSession, startCallArgs };
+    };
+
+    const AGENT_END = { reason: 'agent', context: { type: 'end_call', reason: 'Agent ended the call' } };
+
+    it('generates the story after one user turn when the agent ended the call', async () => {
+      const { startCallArgs } = await startWithUserTurns(1);
+
+      await act(async () => {
+        startCallArgs.onDisconnect(AGENT_END);
+      });
+
+      expect(mockStoreConfig.endConversation).toHaveBeenCalledWith('User: Hello\nAgent: Hi there');
+
+      // The bypass has to skip validateAndProcess, not just the gate in the
+      // hook: that method carries its own two-user-message minimum, so going
+      // through it would drop this transcript even though the agent asked for
+      // the story.
+      expect(TranscriptProcessor.processTranscript).toHaveBeenCalled();
+      expect(TranscriptProcessor.validateAndProcess).not.toHaveBeenCalled();
+
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+
+      expect(mockGenerateStoryAutomatically).toHaveBeenCalledWith('User: Hello\nAgent: Hi there');
+    });
+
+    it('keeps the two-turn floor when the socket merely dropped', async () => {
+      const { startCallArgs } = await startWithUserTurns(1);
+
+      // No details at all is what a plain network drop looks like.
+      await act(async () => {
+        startCallArgs.onDisconnect(undefined);
+      });
+
+      expect(mockStoreConfig.endConversation).not.toHaveBeenCalled();
+      expect(mockGenerateStoryAutomatically).not.toHaveBeenCalled();
+    });
+
+    it('writes nothing when the agent ends before the child has said anything', async () => {
+      const { startCallArgs } = await startWithUserTurns(0);
+
+      await act(async () => {
+        startCallArgs.onDisconnect(AGENT_END);
+      });
+
+      expect(mockStoreConfig.endConversation).not.toHaveBeenCalled();
+      expect(mockGenerateStoryAutomatically).not.toHaveBeenCalled();
+    });
+
+    it('does not show the child an error when the agent ends the call', async () => {
+      const { startCallArgs } = await startWithUserTurns(1);
+
+      await act(async () => {
+        startCallArgs.onDisconnect(AGENT_END);
+      });
+
+      expect(useErrorStore.getState().getError(CONVERSATION_ERROR_KEY)).toBeUndefined();
+      expect(mockStoreConfig.resetConversation).not.toHaveBeenCalled();
+    });
+  });
+
   describe('disconnect handling', () => {
     it('should call endSession when disconnected', async () => {
       const mockSession = {

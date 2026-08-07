@@ -24,10 +24,16 @@ export interface ConversationMessage {
 export const CONVERSATION_ERROR_KEY = 'conversation';
 
 /**
- * Names the agent may use for "I have enough, write the story". Which one it
- * actually calls depends on the ElevenLabs agent config, so both are
- * registered — the SDK matches on the exact name and treats a miss as a fatal
- * error (#111).
+ * Client-tool names that mean "I have enough, write the story". The SDK matches
+ * on the exact name and treats a miss as a fatal error, so the name has to be
+ * right (#111).
+ *
+ * `end_call` is here as a safety net only. ElevenLabs support confirmed that the
+ * agent's real hang-up tool is the *system* tool `end_call`, and system tools
+ * never reach clientTools — the SDK sees an `agent_tool_response`, ends the
+ * session itself, and we find out through onDisconnect. This entry therefore
+ * only fires if someone configures a *custom client* tool that happens to share
+ * the name. The system-tool path is handled in onDisconnect below.
  */
 export const END_CONVERSATION_TOOL_NAMES = ['end_conversation', 'end_call'] as const;
 
@@ -144,14 +150,43 @@ export const useConversation = (): UseConversationReturn => {
     }, 500);
   }, [setSession, storeEndConversation, generateStoryAutomatically]);
 
-  // Validate and process transcript
-  const processTranscriptAndEnd = useCallback(() => {
+  /**
+   * Turns what was said into a transcript and ends the conversation with it.
+   *
+   * `endedDeliberately` marks the two cases where the agent itself decided it
+   * had heard enough: its end tool, and its `end_call` system tool. There the
+   * usual two-user-turn floor must not apply — the agent already judged the
+   * transcript sufficient, and dropping the story on the floor is what card #111
+   * is about. One user turn is still required, because a story built from a
+   * transcript with nothing of the child's in it is worse than none.
+   */
+  const processTranscriptAndEnd = useCallback((endedDeliberately = false) => {
     const messageList = rawMessages.current;
-    const finalTranscript = TranscriptProcessor.validateAndProcess(messageList);
 
-    if (!finalTranscript) {
+    if (!endedDeliberately) {
+      const finalTranscript = TranscriptProcessor.validateAndProcess(messageList);
+
+      if (!finalTranscript) {
+        return;
+      }
+
+      pendingFlushRef.current = false;
+      void handleEndConversationInternal(finalTranscript);
       return;
     }
+
+    const userMessages = messageList.filter(msg => msg.role === 'user');
+
+    if (userMessages.length === 0) {
+      logger.warn(LogCategory.CONVERSATION, 'Deliberate end with nothing from the user - no story generation', {
+        totalMessages: messageList.length,
+      });
+      return;
+    }
+
+    // Skips validateAndProcess on purpose: its minimum is the thing being
+    // bypassed here.
+    const finalTranscript = TranscriptProcessor.processTranscript(messageList);
 
     pendingFlushRef.current = false;
     void handleEndConversationInternal(finalTranscript);
@@ -176,7 +211,7 @@ export const useConversation = (): UseConversationReturn => {
     pendingFlushRef.current = false;
 
     setTimeout(() => {
-      processTranscriptAndEnd();
+      processTranscriptAndEnd(true);
     }, 0);
 
     return 'Ending the conversation now.';
@@ -231,30 +266,41 @@ export const useConversation = (): UseConversationReturn => {
           trackEvent(AnalyticsEvents.CONVERSATION_CONNECTED, { connection_time_ms: connectionTimeMs });
         },
 
-        onDisconnect: () => {
+        onDisconnect: (details) => {
           conversationLogger.disconnected();
           setSession(null);
 
           if (rawMessages.current.length > 0) {
             const userMessages = rawMessages.current.filter(msg => msg.role === 'user');
 
-            logger.info(LogCategory.CONVERSATION, 'Disconnect with messages - processing transcript as fallback', {
+            // The agent's `end_call` system tool is closed by the SDK, not by
+            // us, so a deliberate end arrives here and nowhere else. When the
+            // agent chose to stop, it had already decided the transcript was
+            // enough — so the two-turn floor below must not apply. It is there
+            // to stop a socket that drops early from generating a story out of
+            // almost nothing, which is a different situation (#111).
+            const endedByAgent = details?.reason === 'agent';
+
+            logger.info(LogCategory.CONVERSATION, 'Disconnect with messages - processing transcript', {
               totalMessages: rawMessages.current.length,
-              userMessages: userMessages.length
+              userMessages: userMessages.length,
+              reason: details?.reason,
+              endedByAgent,
             });
 
-            if (userMessages.length >= 2) {
+            if (endedByAgent || userMessages.length >= 2) {
               if (flushTimeoutRef.current) {
                 clearTimeout(flushTimeoutRef.current);
                 flushTimeoutRef.current = null;
               }
               pendingFlushRef.current = false;
 
-              processTranscriptAndEnd();
+              processTranscriptAndEnd(endedByAgent);
             } else {
               logger.warn(LogCategory.CONVERSATION, 'Disconnect with insufficient user messages - no story generation', {
                 userMessages: userMessages.length,
-                minRequired: 2
+                minRequired: 2,
+                reason: details?.reason,
               });
             }
           }
