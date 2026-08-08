@@ -18,10 +18,15 @@ import { BLANK_IMAGE, SILENT_MP3, TEST_STORIES, makeStory } from './fixtures/dat
 
 const [FIRST_STORY, SECOND_STORY] = TEST_STORIES;
 
-/** Open a story straight from its URL, the way a bookmarked link would. */
-async function openReader(page: Page, slug: string = FIRST_STORY.slug): Promise<void> {
+/**
+ * Open a story straight from its URL, the way a bookmarked link would.
+ *
+ * A story is addressed by its id, not its slug (card #107) — the slug is only a
+ * label on the shelf row.
+ */
+async function openReader(page: Page, id: string | number = FIRST_STORY.id): Promise<void> {
   await seedAuthToken(page);
-  await page.goto(`/bookshelf/${slug}`);
+  await page.goto(`/bookshelf/${id}`);
 }
 
 test.describe('bookshelf', () => {
@@ -29,8 +34,8 @@ test.describe('bookshelf', () => {
     await page.getByTestId('tab-bookshelf').click();
 
     await expect(page.getByTestId('bookshelf-list')).toBeVisible();
-    await expect(page.getByTestId(`bookshelf-card-${FIRST_STORY.slug}`)).toBeVisible();
-    await expect(page.getByTestId(`bookshelf-card-${SECOND_STORY.slug}`)).toBeVisible();
+    await expect(page.getByTestId(`bookshelf-card-${FIRST_STORY.id}`)).toBeVisible();
+    await expect(page.getByTestId(`bookshelf-card-${SECOND_STORY.id}`)).toBeVisible();
 
     // The API returns them oldest-first; the shelf sorts by created_at.
     await expect(page.getByTestId('bookshelf-card-title')).toHaveText([
@@ -46,7 +51,7 @@ test.describe('bookshelf', () => {
     await seedAuthToken(page);
     await page.goto('/bookshelf');
 
-    const card = page.getByTestId(`bookshelf-card-${story.slug}`);
+    const card = page.getByTestId(`bookshelf-card-${story.id}`);
     await expect(card).toBeVisible();
     await expect(card.locator('img')).toHaveAttribute('src', BLANK_IMAGE);
   });
@@ -80,16 +85,16 @@ test.describe('bookshelf', () => {
     await page.getByTestId('bookshelf-retry').click();
 
     await expect(page.getByTestId('bookshelf-list')).toBeVisible();
-    await expect(page.getByTestId(`bookshelf-card-${FIRST_STORY.slug}`)).toBeVisible();
+    await expect(page.getByTestId(`bookshelf-card-${FIRST_STORY.id}`)).toBeVisible();
   });
 
   test('tapping a story opens it in the reader at page one', async ({ signedInPage: page }) => {
     await page.getByTestId('tab-bookshelf').click();
-    await page.getByTestId(`bookshelf-card-${FIRST_STORY.slug}`).click();
+    await page.getByTestId(`bookshelf-card-${FIRST_STORY.id}`).click();
 
     await expect(page.getByTestId('book-reader')).toBeVisible();
     await expect(page.getByTestId('book-story-name')).toHaveText(FIRST_STORY.title);
-    await expect(page).toHaveURL(new RegExp(`/bookshelf/${FIRST_STORY.slug}$`));
+    await expect(page).toHaveURL(new RegExp(`/bookshelf/${FIRST_STORY.id}$`));
   });
 });
 
@@ -157,7 +162,8 @@ test.describe('reader', () => {
   });
 
   test('a story that will not load says so and offers a way back', async ({ page }) => {
-    await openReader(page, 'no-such-story');
+    // An id no story answers to, so the mock's `/stories/*` rule 404s.
+    await openReader(page, 999);
 
     await expect(page.getByTestId('story-error')).toBeVisible();
     await expect(page.getByTestId('book-reader')).toBeHidden();
@@ -170,13 +176,13 @@ test.describe('reader', () => {
     // Stories written before the API returned structured pages carry their
     // text in `body`, split on the same marker the generator writes.
     const legacy = makeStory({
-      slug: 'legacy-story',
+      id: 201,
       pages: [],
       body: 'The first page.\n\n---PAGE BREAK---\n\nThe second page.',
     });
     api.get('/stories/*', { json: { data: legacy } });
 
-    await openReader(page, legacy.slug);
+    await openReader(page, legacy.id);
 
     await expect(page.getByTestId('book-page-number')).toHaveText('Page 1 of 2');
     await expect(page.getByTestId('book-page-text')).toContainText('The first page.');
@@ -187,7 +193,7 @@ test.describe('reader', () => {
 
   test('a page with no illustration asks the backend for one', async ({ page, api }) => {
     const story = makeStory({
-      slug: 'needs-an-image',
+      id: 202,
       pages: [
         { content: 'A page still waiting on its picture.', imageUrl: null, illustrationPrompt: 'a fox' },
         { content: 'The page after it.', imageUrl: BLANK_IMAGE, illustrationPrompt: 'a field' },
@@ -195,7 +201,7 @@ test.describe('reader', () => {
     });
     api.get('/stories/*', { json: { data: story } });
 
-    await openReader(page, story.slug);
+    await openReader(page, story.id);
 
     // react-native-web renders an Image as a wrapper around a real <img>.
     await expect(page.getByTestId('book-page-image').locator('img')).toHaveAttribute('src', BLANK_IMAGE);

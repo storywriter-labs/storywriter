@@ -55,7 +55,7 @@ export default defineConfig({
    * `npm run build:web` (the CI workflow does).
    *
    * `--single` makes the static server fall back to index.html for paths with
-   * no prerendered file, which is how dynamic routes like /bookshelf/[slug]
+   * no prerendered file, which is how dynamic routes like /bookshelf/[id]
    * get served. Real files still win, so /login keeps its own prerendered HTML.
    */
   webServer: {
