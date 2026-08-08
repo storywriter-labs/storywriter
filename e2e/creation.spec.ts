@@ -37,6 +37,16 @@ async function startConversation(page: Page, conversation: { waitForConnection: 
   await expect(page.getByTestId('conversation-active')).toBeVisible();
 }
 
+/**
+ * A request with no matching rule is answered 501, which the app takes as a
+ * failure and quietly reroutes around — so a mock that has drifted from the API
+ * shows up as a puzzling assertion further down rather than as a missing rule.
+ * Same guard as `bookshelf.spec.ts`.
+ */
+test.afterEach(({ api }) => {
+  expect(api.unhandled).toEqual([]);
+});
+
 test.describe('conversation', () => {
   test('Create a Story asks the backend for a signed URL and opens the socket', async ({
     signedInPage: page,
