@@ -29,6 +29,17 @@ async function openReader(page: Page, id: string | number = FIRST_STORY.id): Pro
   await page.goto(`/bookshelf/${id}`);
 }
 
+/**
+ * A 501 from the mock layer is silent: the app just sees a failed request and
+ * takes an error path, so a missing rule looks like a product bug rather than a
+ * gap in the setup. That is how the page-audio endpoint went unmocked until the
+ * narration tests here needed it. Check every test, not just the shelf one in
+ * foundation.spec.ts.
+ */
+test.afterEach(({ api }) => {
+  expect(api.unhandled).toEqual([]);
+});
+
 test.describe('bookshelf', () => {
   test('lists the stories the API returns, newest first', async ({ signedInPage: page }) => {
     await page.getByTestId('tab-bookshelf').click();
@@ -200,15 +211,22 @@ test.describe('reader', () => {
       ],
     });
     api.get('/stories/*', { json: { data: story } });
+    // Hold the picture back for a moment, so the shimmer placeholder is a state
+    // the test can see rather than a frame that may already be gone.
+    api.post('/stories/*/pages/*/image', { json: { imageUrl: BLANK_IMAGE }, delayMs: 1000 });
 
     await openReader(page, story.id);
 
+    await expect(page.getByTestId('book-page-image-loading')).toBeVisible();
+
     // react-native-web renders an Image as a wrapper around a real <img>.
     await expect(page.getByTestId('book-page-image').locator('img')).toHaveAttribute('src', BLANK_IMAGE);
+    await expect(page.getByTestId('book-page-image-loading')).toBeHidden();
 
+    const imageRequests = api.requestsFor('POST', '/stories/*/pages/*/image');
+    expect(imageRequests.length).toBeGreaterThan(0);
     // Page numbers are 1-based over the wire.
-    const [request] = api.requestsFor('POST', '/stories/*/pages/*/image');
-    expect(request.path).toBe(`/stories/${story.id}/pages/1/image`);
+    expect(imageRequests[0].path).toBe(`/stories/${story.id}/pages/1/image`);
   });
 });
 
@@ -221,8 +239,9 @@ test.describe('narration', () => {
     await expect(page.getByLabel('Pause narration')).toBeVisible();
     await expect(page.getByTestId('narration-error')).toBeHidden();
 
-    const [request] = api.requestsFor('POST', '/stories/*/pages/*/audio');
-    expect(request.path).toBe(`/stories/${FIRST_STORY.id}/pages/1/audio`);
+    const audioRequests = api.requestsFor('POST', '/stories/*/pages/*/audio');
+    expect(audioRequests.length).toBeGreaterThan(0);
+    expect(audioRequests[0].path).toBe(`/stories/${FIRST_STORY.id}/pages/1/audio`);
   });
 
   test('pausing stops narration, and the next page stays quiet', async ({ page, api }) => {
@@ -234,6 +253,11 @@ test.describe('narration', () => {
 
     await page.getByTestId('book-next-page').click();
     await expect(page.getByTestId('book-page-number')).toHaveText('Page 2 of 3');
+
+    // Give the page-change effect room to fire before asserting that it did
+    // not: with no wait this passes whether narration is suppressed or merely
+    // slower than the assertion.
+    await page.waitForTimeout(1000);
 
     // Pause is a preference, not a one-page mute: no TTS until Play is pressed.
     await expect(page.getByLabel('Play narration')).toBeVisible();
