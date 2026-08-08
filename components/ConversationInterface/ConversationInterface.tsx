@@ -137,7 +137,7 @@ Agent: That's such a wonderful and heartwarming idea! I think we have everything
 
         {/* Active Conversation Controls */}
         {isActive && (
-          <View style={styles.audioContainer}>
+          <View style={styles.audioContainer} testID="conversation-active">
             {/* Microphone Icon */}
             <View style={[
               styles.microphoneIcon,
@@ -158,7 +158,7 @@ Agent: That's such a wonderful and heartwarming idea! I think we have everything
                 size={18}
                 color={Colors.teal}
               />
-              <Text style={styles.speakerLabel}>
+              <Text style={styles.speakerLabel} testID="conversation-speaker-label">
                 {currentSpeaker === 'user' && 'You are speaking'}
                 {currentSpeaker === 'agent' && 'Agent is speaking'}
                 {currentSpeaker === 'none' && 'Listening...'}
@@ -179,6 +179,7 @@ Agent: That's such a wonderful and heartwarming idea! I think we have everything
             {/* Skip Conversation Button */}
             <TouchableOpacity
               style={styles.endButton}
+              testID="conversation-skip"
               onPress={() => skipConversation(getRandomPresetTranscript())}
             >
               <Text style={styles.endButtonText}>Skip conversation - create a story</Text>

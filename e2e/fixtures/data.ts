@@ -112,6 +112,35 @@ export function makeStory(overrides: Partial<TestStory> = {}): TestStory {
   };
 }
 
+/**
+ * What `POST /stories/generate` answers with. This is *not* the story record the
+ * rest of the API hands back: generation reports the new row's id under
+ * `story_id`, and storyGenerationService reads that key by name (see its
+ * `generateStory`). Get it wrong and the story arrives with a null id, which
+ * silently costs it both its illustrations and its narration.
+ */
+export interface TestGenerationResponse {
+  story_id: number;
+  title: string;
+  page_count: number;
+  cover_image: string | null;
+  pages: TestPage[];
+}
+
+export function generationResponse(
+  story: TestStory,
+  overrides: Partial<TestGenerationResponse> = {},
+): TestGenerationResponse {
+  return {
+    story_id: story.id,
+    title: story.title,
+    page_count: story.pages.length,
+    cover_image: null,
+    pages: story.pages,
+    ...overrides,
+  };
+}
+
 export const TEST_STORIES: TestStory[] = [
   makeStory(),
   makeStory({

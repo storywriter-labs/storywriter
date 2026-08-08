@@ -1,6 +1,15 @@
 import type { Page, Request, Route } from '@playwright/test';
 
-import { BLANK_IMAGE, SILENT_MP3, TEST_STORIES, TEST_TOKEN, TEST_USER, makeStory } from './data';
+import {
+  BLANK_IMAGE,
+  SILENT_MP3,
+  TEST_STORIES,
+  TEST_TOKEN,
+  TEST_USER,
+  generationResponse,
+  makeStory,
+} from './data';
+import { SIGNED_URL } from './conversation-mock';
 
 /**
  * The app never talks to Together AI or ElevenLabs directly — everything goes
@@ -233,7 +242,11 @@ export function applyDefaults(api: ApiMock, options: MockApiOptions = {}): ApiMo
   api.delete('/stories/*/unsave', { status: 204, json: {} });
 
   // --- generation (Together AI, proxied) ---
-  api.post('/stories/generate', { json: { data: stories[0] ?? makeStory() } });
+  // Note the shape: generation answers with `story_id` / `page_count`, not the
+  // story record `GET /stories/{id}` returns. storyGenerationService reads those
+  // keys by name, and a story with no `story_id` never gets its pages
+  // illustrated or narrated.
+  api.post('/stories/generate', { json: { data: generationResponse(stories[0] ?? makeStory()) } });
   api.post('/stories/*/pages/*/image', { json: { imageUrl: BLANK_IMAGE } });
 
   // --- voice (ElevenLabs, proxied) ---
@@ -250,8 +263,11 @@ export function applyDefaults(api: ApiMock, options: MockApiOptions = {}): ApiMo
     headers: { 'content-type': 'audio/mpeg' },
     buffer: SILENT_MP3,
   });
+  // `signed_url`, not `signedUrl` — elevenLabsService reads the snake_case key
+  // and throws "Missing signed_url in credentials response" without it. The URL
+  // is answered by the WebSocket mock in `conversation-mock.ts`.
   api.post('/conversation/sdk-credentials', {
-    json: { signedUrl: 'wss://127.0.0.1:1/e2e-not-connected' },
+    json: { signed_url: SIGNED_URL },
   });
 
   return api;
