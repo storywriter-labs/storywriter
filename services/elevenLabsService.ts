@@ -4,6 +4,7 @@ import {
   ElevenLabsError,
   AudioGenerationResult,
   ConversationCallbacks,
+  ConversationDisconnectionDetails,
   ConversationSession
 } from '../types/elevenlabs';
 import { serviceLogger } from '@/src/utils/logger';
@@ -234,13 +235,30 @@ export class ElevenLabsService {
       const conversation = await Conversation.startSession({
         signedUrl: signed_url,
 
+        // Tools the agent can call on us, keyed by the exact name it uses.
+        // Anything not listed here goes to onUnhandledClientToolCall, and if
+        // that is missing too the SDK reports it through onError and tears the
+        // session down — which is how the agent's "write the story" call used
+        // to kill the conversation (#111).
+        clientTools: callbacks.clientTools ?? {},
+
+        // Only forwarded when the caller supplies a handler, so that a caller
+        // who registers no tools keeps the SDK's own error-and-report default.
+        ...(callbacks.onUnhandledClientToolCall
+          ? { onUnhandledClientToolCall: callbacks.onUnhandledClientToolCall }
+          : {}),
+
         onConnect: () => {
           this.connectionState = ConnectionState.CONNECTED;
           serviceLogger.elevenlabs.call('WebSocket connected');
           callbacks.onConnect?.();
         },
 
-        onDisconnect: () => this.handleDisconnect(callbacks.onDisconnect),
+        onDisconnect: (details) =>
+          this.handleDisconnect(
+            callbacks.onDisconnect,
+            details as ConversationDisconnectionDetails | undefined
+          ),
 
         onMessage: (message) => callbacks.onMessage?.(message), // Simplified message handling
 
@@ -275,15 +293,24 @@ export class ElevenLabsService {
 
   /**
    * Internal handler for conversation disconnection.
+   *
+   * `details` says who ended the session, and it has to reach the caller. The
+   * agent's `end_call` system tool is closed by the SDK itself, so without this
+   * a deliberate end is indistinguishable from a dropped socket (#111).
    */
-  private handleDisconnect(onDisconnectCallback?: () => void): void {
+  private handleDisconnect(
+    onDisconnectCallback?: (details?: ConversationDisconnectionDetails) => void,
+    details?: ConversationDisconnectionDetails
+  ): void {
     if (this.connectionState !== ConnectionState.DISCONNECTING) {
       // If we are not actively disconnecting, this is an unexpected disconnection
-      serviceLogger.elevenlabs.call('Unexpected WebSocket disconnected - cleaning up');
+      serviceLogger.elevenlabs.call('Unexpected WebSocket disconnected - cleaning up', {
+        reason: details?.reason,
+      });
       this.forceCleanup();
     }
     // If we are disconnecting, the state change will happen after gracefulShutdown completes
-    onDisconnectCallback?.();
+    onDisconnectCallback?.(details);
   }
 
   /**

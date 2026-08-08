@@ -161,13 +161,45 @@ export interface ConversationMessage {
   [key: string]: any;
 }
 
+// A tool the agent can invoke on us mid-conversation. The string it returns is
+// sent back to the agent as the tool result.
+export type ConversationClientTool = (
+  parameters: Record<string, any>
+) => Promise<string | number | void> | string | number | void;
+
+export interface ConversationClientToolCall {
+  tool_name: string;
+  tool_call_id: string;
+  parameters: Record<string, any>;
+}
+
+/**
+ * Why the session ended, as the SDK reports it to onDisconnect.
+ *
+ * `agent` is the one that matters to us. The agent's `end_call` is a *system*
+ * tool: it is not a client tool and never reaches clientTools. The SDK handles
+ * it internally and closes the session itself, so a deliberate end by the agent
+ * looks exactly like a dropped socket unless we read this (#111).
+ *
+ * Mirrors DisconnectionDetails in @elevenlabs/client.
+ */
+export type ConversationDisconnectionDetails =
+  | { reason: 'error'; message: string; context?: any; closeCode?: number; closeReason?: string }
+  | { reason: 'agent'; context?: { type?: string; reason?: string }; closeCode?: number; closeReason?: string }
+  | { reason: 'user' };
+
 export interface ConversationCallbacks {
   onConnect?: () => void;
-  onDisconnect?: () => void;
+  onDisconnect?: (details?: ConversationDisconnectionDetails) => void;
   onMessage?: (message: ConversationMessage) => void;
   onError?: (error: any) => void;
   onStatusChange?: (status: string) => void;
   onModeChange?: (mode: string) => void;
+
+  // Tool calls never arrive through onMessage — the SDK looks the name up in
+  // clientTools and, failing that, hands it to onUnhandledClientToolCall.
+  clientTools?: Record<string, ConversationClientTool>;
+  onUnhandledClientToolCall?: (toolCall: ConversationClientToolCall) => void;
 }
 
 export interface ConversationSession {

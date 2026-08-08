@@ -67,5 +67,33 @@ describe('ElevenLabsService', () => {
 
       await expect(service.startConversationAgent()).rejects.toThrow();
     });
+
+    // The agent's `end_call` is a system tool: the SDK closes the session itself
+    // and the only sign of it is `reason: 'agent'` on these details. Dropping
+    // them here made a deliberate end look like a dropped socket, which is how
+    // the story went missing (#111).
+    it('passes the SDK disconnect details through to the caller', async () => {
+      (client.post as jest.Mock).mockResolvedValue({
+        data: { signed_url: 'wss://api.elevenlabs.io/v1/convai/conversation?signature=abc' },
+      });
+
+      const { Conversation } = require('@elevenlabs/client');
+      let sdkOptions: any;
+      Conversation.startSession.mockImplementation(async (options: any) => {
+        sdkOptions = options;
+        return { endSession: jest.fn(), getId: () => 'session-123' };
+      });
+
+      const onDisconnect = jest.fn();
+      await service.startConversationAgent({ onDisconnect });
+
+      const details = {
+        reason: 'agent',
+        context: { type: 'end_call', reason: 'Agent ended the call' },
+      };
+      sdkOptions.onDisconnect(details);
+
+      expect(onDisconnect).toHaveBeenCalledWith(details);
+    });
   });
 });
