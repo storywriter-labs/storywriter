@@ -88,6 +88,31 @@ describe('RegisterScreen failure feedback', () => {
         expect(getByText(/couldn't reach StoryWriter/)).toBeTruthy();
     });
 
+    it("shows the backend's own message when signup is closed", async () => {
+        mockRegister.mockRejectedValue({
+            response: {
+                status: 403,
+                data: { message: 'Registration is closed on this environment.' },
+            },
+        });
+
+        const { getByText, getByTestId } = render(<RegisterScreen />);
+        fireEvent.press(getByText('Create Account'));
+
+        await waitFor(() => expect(getByTestId('register-form-error')).toBeTruthy());
+        expect(getByText(/Registration is closed on this environment/)).toBeTruthy();
+    });
+
+    it('falls back to the generic message when a 403 carries no message', async () => {
+        mockRegister.mockRejectedValue({ response: { status: 403, data: {} } });
+
+        const { getByText, getByTestId } = render(<RegisterScreen />);
+        fireEvent.press(getByText('Create Account'));
+
+        await waitFor(() => expect(getByTestId('register-form-error')).toBeTruthy());
+        expect(getByText(/Something went wrong on our end/)).toBeTruthy();
+    });
+
     it('still renders field errors for a 422 and no form-level message', async () => {
         mockRegister.mockRejectedValue({
             response: {

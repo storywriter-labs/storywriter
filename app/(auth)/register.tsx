@@ -76,10 +76,22 @@ export default function RegisterScreen() {
 
             let errorType = 'unknown';
             if (error && typeof error === 'object' && 'response' in error) {
-                const axiosError = error as { response?: { status: number; data: { errors: { [key: string]: string[] } } } };
+                const axiosError = error as {
+                    response?: {
+                        status: number;
+                        data: { message?: string; errors: { [key: string]: string[] } };
+                    };
+                };
                 if (axiosError.response?.status === 422) {
                     errorType = 'validation';
                     setErrors(axiosError.response.data.errors);
+                } else if (axiosError.response?.status === 403) {
+                    // Signup is closed on this environment (REGISTRATION_ENABLED=false
+                    // on staging and production). The backend sends a sentence worth
+                    // reading, so show it instead of "something went wrong" — otherwise
+                    // a closed environment looks like a broken one.
+                    errorType = 'registration_closed';
+                    setFormError(axiosError.response.data?.message || SERVER_ERROR_MESSAGE);
                 } else {
                     errorType = 'server';
                     setFormError(SERVER_ERROR_MESSAGE);
