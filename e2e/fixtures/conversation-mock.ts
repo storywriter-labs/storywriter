@@ -121,8 +121,9 @@ export class ConversationMock {
   }
 
   /**
-   * The agent calling the `end_conversation` client tool, which is how it says
-   * "I have enough, write the story". See `useConversation.ts`.
+   * The agent calling the `end_conversation` *client* tool, which is one of the
+   * two ways it says "I have enough, write the story". The SDK looks the name up
+   * in `clientTools` and calls ours. See `useConversation.ts`.
    */
   callsEndConversation(toolName = 'end_conversation'): this {
     return this.send({
@@ -135,8 +136,35 @@ export class ConversationMock {
     });
   }
 
-  /** Hang up from the far end, the way a dropped connection would. */
-  disconnect(code = 1000, reason = 'e2e: agent hung up'): void {
+  /**
+   * The agent hanging up with its `end_call` *system* tool — the other way, and
+   * the one ElevenLabs support says a production agent actually uses.
+   *
+   * System tools never reach `clientTools`. The SDK handles this frame itself
+   * (`BaseConversation.handleAgentToolResponse`), closes the session, and the
+   * app only hears about it through `onDisconnect` with `reason: 'agent'`. So
+   * this exercises a different path through `useConversation` than
+   * `callsEndConversation` does, even though both mean the same thing.
+   */
+  callsEndCall(): this {
+    return this.send({
+      type: 'agent_tool_response',
+      agent_tool_response: { tool_name: 'end_call' },
+    });
+  }
+
+  /**
+   * Drop the socket from the far end, the way a flaky network would.
+   *
+   * The close code matters and is not cosmetic. `WebSocketConnection` maps a
+   * 1000 close to `reason: 'agent'` and everything else to `reason: 'error'`,
+   * and `useConversation` treats an agent-ended call as deliberate — skipping
+   * the two-user-turn floor that stops a socket dropping early from generating
+   * a story out of almost nothing. So a *drop* has to close with something
+   * other than 1000, or it reads to the app as the agent choosing to stop.
+   * Use `callsEndCall()` for a deliberate hang-up.
+   */
+  disconnect(code = 1011, reason = 'e2e: connection dropped'): void {
     this.route?.close({ code, reason });
     this.route = null;
   }

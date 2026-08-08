@@ -22,31 +22,13 @@ import { BLANK_IMAGE, TEST_STORIES, generationResponse, makeStory } from './fixt
 const [GENERATED_STORY] = TEST_STORIES;
 
 /**
- * Answer the page-narration endpoint with something the player can decode.
- *
- * The reader narrates page one the moment it opens, so every test here reaches
- * this endpoint whether it cares about narration or not — and Chromium rejects
- * `play()` on anything it can't decode, which would leave an audio error on
- * screen through assertions that have nothing to do with sound. Narration
- * itself is Tier 2's subject, so this only has to be quiet and real.
- *
- * Registered with `page.route` rather than through the API mock because later
- * routes win in Playwright, and because the mock's bodies are strings — sending
- * MP3 bytes as a string mangles every byte above 0x7f.
+ * Narration is Tier 2's subject, not this file's — nothing here asserts on
+ * sound. But the reader narrates page one the moment it opens, so every test
+ * below reaches the page-audio endpoint whether it cares or not, and Chromium
+ * rejects `play()` on anything it can't decode. The API mock answers that
+ * endpoint with a real silent MP3 by default (`SILENT_MP3`, added in #57), which
+ * keeps an audio error off the screen without this file having to arrange it.
  */
-async function silenceNarration(page: Page): Promise<void> {
-  // MPEG-1 Layer III, 44.1 kHz, 32 kbps, mono, no CRC: a 4-byte header plus 100
-  // zero bytes per frame, which decodes to silence. 40 frames is about a second.
-  const frameHeader = [0xff, 0xfb, 0x10, 0xc0];
-  const body = Buffer.alloc(40 * 104);
-  for (let frame = 0; frame < 40; frame++) {
-    body.set(frameHeader, frame * 104);
-  }
-
-  await page.route('**/api/v1/stories/*/pages/*/audio', (route) =>
-    route.fulfill({ status: 200, headers: { 'content-type': 'audio/mpeg' }, body }),
-  );
-}
 
 /** Start a conversation from the welcome screen and wait for it to be live. */
 async function startConversation(page: Page, conversation: { waitForConnection: () => Promise<void> }) {
@@ -54,10 +36,6 @@ async function startConversation(page: Page, conversation: { waitForConnection: 
   await conversation.waitForConnection();
   await expect(page.getByTestId('conversation-active')).toBeVisible();
 }
-
-test.beforeEach(async ({ page }) => {
-  await silenceNarration(page);
-});
 
 test.describe('conversation', () => {
   test('Create a Story asks the backend for a signed URL and opens the socket', async ({
@@ -115,31 +93,42 @@ test.describe('conversation', () => {
     expect(api.requestsFor('POST', '/conversation/sdk-credentials').length).toBeGreaterThan(1);
   });
 
-  test.fail(
-    'the agent ending the call should generate the story, and does not',
-    async ({ signedInPage: page, conversation }) => {
-      // The agent says "I have enough, write the story" by calling the
-      // `end_conversation` client tool, and the helper text under the microphone
-      // promises exactly that: "The agent will automatically end the
-      // conversation when ready to create your story."
-      //
-      // It cannot happen. `useConversation` watches for the tool call on
-      // `onMessage`, but the SDK never routes client tool calls there — it looks
-      // them up in `clientTools`, and calls `onError` when it finds nothing. So
-      // the child gets the error card instead of their story. Filed as Fizzy
-      // #111; this test is marked `fail` on purpose and turns green when it is
-      // fixed.
+  /**
+   * The two ways the agent says "I have enough, write the story".
+   *
+   * The helper text under the microphone promises it — "The agent will
+   * automatically end the conversation when ready to create your story" — and
+   * for a while neither route delivered: the app watched for the tool call on
+   * `onMessage`, where the SDK never sends it, so the child got the error card
+   * instead of their book. That was Fizzy #111, fixed in #62.
+   *
+   * Both are covered because they run through different code. A *client* tool
+   * is looked up in `clientTools` and calls straight into the app; the `end_call`
+   * *system* tool never reaches `clientTools` at all — the SDK closes the session
+   * itself and the app finds out from `onDisconnect`. ElevenLabs support says a
+   * production agent uses the system tool, so a suite that only proved the
+   * client-tool path would stay green while real tablets failed.
+   */
+  for (const { label, endTheCall } of [
+    { label: 'its end_conversation client tool', endTheCall: (c: ConversationMock) => c.callsEndConversation() },
+    { label: 'its end_call system tool', endTheCall: (c: ConversationMock) => c.callsEndCall() },
+  ]) {
+    test(`the agent ending the call with ${label} writes the story`, async ({
+      signedInPage: page,
+      conversation,
+    }) => {
       await startConversation(page, conversation);
 
       conversation.agentSays('What kind of story would you like?');
       conversation.userSays('A dragon who is scared of fire');
       conversation.agentSays('Where does the dragon live?');
       conversation.userSays('Under a waterfall');
-      conversation.callsEndConversation();
+      endTheCall(conversation);
 
       await expect(page.getByTestId('story-generation-splash')).toBeVisible();
-    },
-  );
+      await expect(page.getByTestId('book-reader')).toBeVisible();
+    });
+  }
 
   test('a dropped connection still writes the story from what was said', async ({
     signedInPage: page,
