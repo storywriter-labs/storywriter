@@ -33,6 +33,8 @@ export interface TestStory {
   prompt: string;
   created_at: string;
   pages: TestPage[];
+  /** Signed cover URL the API hands back. Older stories don't have one. */
+  coverImageUrl?: string | null;
 }
 
 /**
@@ -42,6 +44,40 @@ export interface TestStory {
  */
 export const BLANK_IMAGE =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+/**
+ * MPEG-1 Layer III frame header for 44.1 kHz, 32 kbps, mono, no CRC. Every
+ * frame is 4 header bytes plus 100 zero bytes, which decodes to silence.
+ */
+const MP3_FRAME_HEADER = [0xff, 0xfb, 0x10, 0xc0];
+const MP3_FRAME_BYTES = 104;
+/** One frame of Layer III at 44.1 kHz is 1152 samples ≈ 26.12 ms. */
+const MP3_FRAME_SECONDS = 1152 / 44100;
+
+/**
+ * A real, decodable MP3 of silence, built frame by frame.
+ *
+ * The narration player hands its bytes to an `<audio>` element, and Chromium
+ * rejects `play()` on anything it can't decode — so a stand-in like an empty
+ * body or a text placeholder would put every narration test on the playback
+ * error path instead of the one it means to exercise. This is the smallest
+ * thing that actually plays.
+ *
+ * Default length is generous on purpose: the clip has to outlast the
+ * assertions that follow it, or narration finishes mid-test and the pause
+ * control the test is looking for has already flipped back to play.
+ */
+export function silentMp3(seconds = 5): Buffer {
+  const frames = Math.max(1, Math.ceil(seconds / MP3_FRAME_SECONDS));
+  const buffer = Buffer.alloc(frames * MP3_FRAME_BYTES);
+  for (let frame = 0; frame < frames; frame++) {
+    buffer.set(MP3_FRAME_HEADER, frame * MP3_FRAME_BYTES);
+  }
+  return buffer;
+}
+
+/** The narration bytes the mocked TTS endpoints answer with. */
+export const SILENT_MP3 = silentMp3();
 
 export function makeStory(overrides: Partial<TestStory> = {}): TestStory {
   const pages: TestPage[] = overrides.pages ?? [

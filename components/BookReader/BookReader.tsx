@@ -61,6 +61,7 @@ const ShimmerPlaceholder = () => {
 
     return (
         <Animated.View
+            testID="book-page-image-loading"
             style={[
                 styles.illustration,
                 styles.shimmerPlaceholder,
@@ -750,6 +751,7 @@ const BookReader = ({ sections: sectionsProp, name, storyId: storyIdProp, onBack
                                 <ShimmerPlaceholder />
                             ) : currentPage.imageUrl ? (
                                 <Image
+                                    testID="book-page-image"
                                     source={{ uri: currentPage.imageUrl }}
                                     style={styles.illustration}
                                     resizeMode="contain"
