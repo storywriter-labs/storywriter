@@ -263,9 +263,32 @@ test.describe('narration', () => {
     await expect(page.getByLabel('Play narration')).toBeVisible();
     expect(api.requestsFor('POST', '/stories/*/pages/*/audio')).toHaveLength(callsWhilePaused);
 
-    // Stops here on purpose. Pressing Play now replays page one's narration
-    // over page two instead of fetching page two's — see card #109. Assert the
-    // Play-after-pause behaviour once that is fixed.
+    // What Play does from here has its own test, below.
+  });
+
+  test('Play after a pause narrates the page on screen, not the paused one', async ({ page, api }) => {
+    await openReader(page);
+    await page.getByLabel('Pause narration').click();
+    await expect(page.getByLabel('Play narration')).toBeVisible();
+
+    const callsWhilePaused = api.requestsFor('POST', '/stories/*/pages/*/audio').length;
+
+    await page.getByTestId('book-next-page').click();
+    await expect(page.getByTestId('book-page-number')).toHaveText('Page 2 of 3');
+
+    // Turning the page pauses the player but deliberately keeps page one's
+    // audio loaded, so a quick back-and-forth costs nothing. Play has to notice
+    // that what is loaded is not this page and fetch page two's instead —
+    // before card #109 it replayed page one over page two and fetched nothing.
+    await page.getByLabel('Play narration').click();
+
+    await expect(page.getByLabel('Pause narration')).toBeVisible();
+
+    const audioRequests = api.requestsFor('POST', '/stories/*/pages/*/audio');
+    expect(audioRequests).toHaveLength(callsWhilePaused + 1);
+    expect(audioRequests[audioRequests.length - 1].path).toBe(
+      `/stories/${FIRST_STORY.id}/pages/2/audio`,
+    );
   });
 
   test('a failed narration shows an error with a retry that recovers', async ({ page, api }) => {
